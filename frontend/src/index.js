@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client'; // Importez "react-dom/client" pour React 18
 import App from './App';
+import "./index.css";
 
 // Récupérer l'élément root dans le DOM
 const rootElement = document.getElementById('root');
