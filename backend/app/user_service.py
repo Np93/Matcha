@@ -34,7 +34,7 @@ async def get_user_by_email(email: str):
 async def get_user_by_id(id: str):
     """Récupère un utilisateur par son id."""
     async with async_session() as session:
-        query = select(users_table).where(users_table.c.id == id)
+        query = select(users_table).where(users_table.c.id == int(id))
         result = await session.execute(query)
         user = result.fetchone()
         if user:

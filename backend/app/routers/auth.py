@@ -62,7 +62,9 @@ async def login(request: Request, response: Response):
 
     print(f"DEBUG: Token generated and set in cookie for user: {email}")  # Log du token généré
 
-    return {"message": "Login successful"}
+    return {
+        "id": user["id"],
+    }
 
 
 @router.post("/signup")
@@ -114,44 +116,53 @@ async def signup(request: Request, response: Response):
 
 @router.post("/refresh")
 async def refresh_token(request: Request, response: Response):
-    refresh_token = request.cookies.get("refresh_token")
-    if not refresh_token:
-        raise HTTPException(status_code=401, detail="Missing refresh token")
+    print("refresh")
+    user = await verify_user_from_token(request, token_key="refresh_token")  # Vérifie le refresh token
 
-    try:
-        payload = jwt.decode(refresh_token, settings.api_secret, algorithms=[settings.jwt_algorithm])
-        user_id = payload.get("sub")
+    # Générer un nouveau access token
+    access_token, _ = create_tokens(user["id"])
 
-        # Vérification que l'utilisateur est actif
-        user = await get_user_by_id(user_id)
-        if not user or not user["status"]:
-            raise HTTPException(status_code=401, detail="User not authenticated")
+    # Mettre à jour le cookie d'access token
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="Strict"
+    )
 
-        # Générer un nouveau access token
-        access_token, _ = create_tokens(user_id)
-
-        # Mettre à jour le cookie d'access token
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            secure=True,
-            samesite="Strict"
-        )
-
-        return {"message": "Access token refreshed"}
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    return {"message": "Access token refreshed"}
 
 @router.get("/profile")
 async def get_profile(request: Request):
+    print("profile")
     user = await verify_user_from_token(request)  # Vérifie l'access token
 
     # Retourner les informations utilisateur
     return {
-        "message": "All is OK",
-        "user": {
-            "id": user["id"],
-            "created_at": user["created_at"],
-        },
+        "id": user["id"],
+        "created_at": user["created_at"],
     }
+
+@router.get("/status")
+async def get_profile(request: Request):
+    print("status")
+    user = await verify_user_from_token(request)  # Vérifie l'access token
+
+    # Retourner les informations utilisateur
+    return {
+        "id": user["id"],
+    }
+
+@router.post("/logout")
+async def logout(request: Request, response: Response):
+    user_id = request.headers.get("X-User-ID")
+    print(user_id)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing user ID in headers")
+    user = await verify_user_from_token(request)
+    if str(user["id"]) != user_id:
+        raise HTTPException(status_code=403, detail="User ID does not match authenticated user")
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return {"message": "Logged out successfully"}

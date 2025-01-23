@@ -15,7 +15,7 @@ export const login = async (email, password) => {
         }
       );
   
-      return response.data.message; // Retourne le message de succès envoyé par le backend
+      return response.data; // Retourne le message de succès envoyé par le backend
     } catch (error) {
       console.error("Login failed:", error); // Affiche l'erreur dans la console
       throw new Error(error.response?.data?.detail || "Login failed"); // Lève une erreur pour le frontend
@@ -48,13 +48,19 @@ axios.defaults.withCredentials = true;
 const API_URL = "http://localhost:8000"; // Remplacez par l'URL de votre backend
 
 // Requête sécurisée pour les données protégées
-export const secureApiCall = async (url, method = "GET", body = null) => {
+export const secureApiCall = async (url, method = "GET", body = null, userId = null) => {
   try {
+    console.log("log dans secureApiCall", userId)
+    const headers = { "Content-Type": "application/json" };
+    if (userId) {
+      headers["X-User-ID"] = userId; // Ajoute l'ID utilisateur dans le header
+    }
+
     const response = await axios({
       url: `${API_URL}${url}`,
       method,
       data: body,
-      headers: { "Content-Type": "application/json" },
+      headers,
     });
     return response.data;
   } catch (error) {
@@ -81,4 +87,4 @@ export const secureApiCall = async (url, method = "GET", body = null) => {
 };
 
 // Exemple d'appel API sécurisé
-export const getProfileData = () => secureApiCall("/profile");
+export const getProfileData = () => secureApiCall("/auth/profile");

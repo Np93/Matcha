@@ -1,21 +1,23 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../utils/api";
+import { useAuth } from "../context/AuthContext";
 
-const LoginForm = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate(); // Hook pour la navigation
+const LoginForm = () => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const { updateAuthContext } = useAuth(); // Récupère la fonction de connexion depuis le contexte
+    const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const message = await login(email, password);
-      onLoginSuccess();
-      alert(message); // Message de succès
-      navigate("/profile"); // Redirige vers la page de profil
+      const response = await login(email, password); // Retourne { id, token }
+      console.log(response)
+      updateAuthContext(response); // Met à jour l'état global avec l'ID utilisateur
+      navigate("/profile");
     } catch (error) {
-      alert(error.message); // Message d'erreur
+      alert(error.message);
     }
   };
 
