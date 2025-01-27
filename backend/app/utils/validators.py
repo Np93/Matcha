@@ -1,4 +1,5 @@
 import re
+from fastapi import HTTPException
 
 def validate_email(email: str) -> bool:
     """
@@ -31,3 +32,10 @@ def validate_password(password: str) -> bool:
     if len(password) > 20:
         return False
     return True
+
+def validate_text_field(value: str, field_name: str, regex: str = r"^[a-zA-Z\s]+$"):
+    """
+    Valide un champ texte en vérifiant qu'il respecte un motif regex.
+    """
+    if not value or not re.match(regex, value):
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name}")

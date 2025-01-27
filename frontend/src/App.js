@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import Signup from "./components/SignupForm";
 import Login from "./components/LoginForm";
 import Profile from "./components/Profile";
+import CompleteProfile from "./components/CompleteProfile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 const ProtectedRoute = ({ element: Component }) => {
@@ -36,6 +37,7 @@ const App = () => {
               path="/profile"
               element={<ProtectedRoute element={Profile} />}
             />
+            <Route path="/complete-profile" element={<ProtectedRoute element={CompleteProfile} />} />
             {/* Ajoutez d'autres routes protégées ici */}
           </Routes>
         </div>

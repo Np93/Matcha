@@ -29,10 +29,54 @@ const Profile = () => {
   }
 
   return (
-    <div>
-      <h2>Your Profile</h2>
-      <p>ID: {profileData.id}</p>
-      <p>Created At: {profileData.created_at}</p>
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-4">Your Profile</h2>
+      <div className="space-y-2">
+        <p>
+          <strong>ID:</strong> {profileData.id || "N/A"}
+        </p>
+        <p>
+          <strong>Username:</strong> {profileData.username || "N/A"}
+        </p>
+        <p>
+          <strong>First Name:</strong> {profileData.first_name || "N/A"}
+        </p>
+        <p>
+          <strong>Last Name:</strong> {profileData.last_name || "N/A"}
+        </p>
+        <p>
+          <strong>Gender:</strong> {profileData.gender || "N/A"}
+        </p>
+        <p>
+          <strong>Sexual Preferences:</strong>{" "}
+          {profileData.sexual_preferences || "N/A"}
+        </p>
+        <p>
+          <strong>Biography:</strong> {profileData.biography || "N/A"}
+        </p>
+        <p>
+          <strong>Interests:</strong>{" "}
+          {profileData.interests
+            ? JSON.parse(profileData.interests).join(", ")
+            : "N/A"}
+        </p>
+        <div>
+          <strong>Profile Pictures:</strong>
+          {profileData.profile_pictures ? (
+            JSON.parse(profileData.profile_pictures).map((picture, index) => (
+              <div key={index} className="mt-2">
+                <img
+                  src={picture}
+                  alt={`Profile Picture ${index + 1}`}
+                  className="w-24 h-24 object-cover rounded-md shadow-md"
+                />
+              </div>
+            ))
+          ) : (
+            <p>N/A</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
