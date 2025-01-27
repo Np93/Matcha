@@ -58,6 +58,14 @@ const Navbar = () => {
                       Signup
                     </Link>
                   </li>
+                  <li>
+                    <Link
+                      to="/"
+                      className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white"
+                    >
+                      Home
+                    </Link>
+                  </li>
                 </ul>
               )}
             </div>
