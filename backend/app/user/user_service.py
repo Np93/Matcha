@@ -74,25 +74,6 @@ async def save_profile_picture(user_id: int, image_bytes: bytes):
             )
             await session.execute(query)
 
-# async def add_user(email: str, password_hash: str):
-#     """Ajoute un utilisateur dans la base de données."""
-#     async with async_session() as session:
-#         async with session.begin():
-#             query = insert(users_table).values(
-#                 email=email,
-#                 password_hash=password_hash,
-#                 created_at=datetime.utcnow(),
-#                 status=True  # Le statut est défini sur "connecté" après l'inscription
-#             )
-#             await session.execute(query)
-
-# async def update_user_status(email: str, status: bool):
-#     """Met à jour le statut de l'utilisateur."""
-#     async with async_session() as session:
-#         async with session.begin():
-#             query = update(users_table).where(users_table.c.email == email).values(status=status)
-#             await session.execute(query)
-
 async def update_user_status(user_id: str, status: bool):
     """Met à jour le statut de l'utilisateur en utilisant l'ID."""
     async with async_session() as session:

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
@@ -7,7 +8,7 @@ from app.tables.profile import profiles_table
 from app.utils.database import async_session
 from fastapi import HTTPException
 
-async def upsert_profile(user_id: int, gender: str, sexual_preferences: str, biography: str, interests: list):
+async def upsert_profile(user_id: int, gender: str, sexual_preferences: str, biography: str, interests: list, birthday: str = None):
     """
     Ajoute ou met à jour un profil utilisateur.
     """
@@ -15,19 +16,22 @@ async def upsert_profile(user_id: int, gender: str, sexual_preferences: str, bio
         async with session.begin():
             print("le user_id dans upsert_profile: ", user_id)
             # Préparer la requête d'upsert
+            birthday_date = datetime.strptime(birthday, "%Y-%m-%d").date() if birthday else None
             query = insert(profiles_table).values(
                 user_id=user_id,
                 gender=gender,
                 sexual_preferences=sexual_preferences,
                 biography=biography,
-                interests=json.dumps(interests)  # Convertit les tags en JSON
+                interests=json.dumps(interests),  # Convertit les tags en JSON
+                birthday=birthday_date
             ).on_conflict_do_update(
                 index_elements=["user_id"],  # Mise à jour si le profil existe déjà
                 set_={
                     "gender": gender,
                     "sexual_preferences": sexual_preferences,
                     "biography": biography,
-                    "interests": json.dumps(interests)
+                    "interests": json.dumps(interests),
+                    "birthday": birthday_date
                 }
             )
             await session.execute(query)
@@ -48,7 +52,7 @@ async def get_profile_by_user_id(id: int):
             )
             profile_data = query.mappings().first()
             # profile_data = query.fetchone()
-
+            print("ceci est les information dans profile_data qui gere la db: ", profile_data)
             if not profile_data:
                 raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -58,4 +62,5 @@ async def get_profile_by_user_id(id: int):
                 "sexual_preferences": profile_data["sexual_preferences"],
                 "biography": profile_data["biography"],
                 "interests": profile_data["interests"],  # Peut être en JSON
+                "birthday": profile_data["birthday"].strftime("%Y-%m-%d") if profile_data["birthday"] else None
             }

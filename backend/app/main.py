@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from app.routers import auth
+from app.routers import auth, profile, log, profiles_complete
 from app.config import settings
 from app.utils.database import create_tables
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,3 +27,6 @@ app.add_middleware(
 
 # Inclure les routes
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(log.router, prefix="/log", tags=["log"])
+app.include_router(profile.router, prefix="/profile", tags=["profile"])
+app.include_router(profiles_complete.router, prefix="/profiles_complete", tags=["profiles_complete"])

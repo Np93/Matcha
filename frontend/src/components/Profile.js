@@ -2,18 +2,25 @@ import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import {
+  UserCircleIcon,
+  CalendarDaysIcon,
+  GlobeAltIcon,
+  IdentificationIcon,
+  HeartIcon,
+} from "@heroicons/react/24/outline"; // https://heroicons.com/
 
 const Profile = () => {
   const [profileData, setProfileData] = useState(null);
-  const { isLoggedIn, updateAuthContext, logout } = useAuth(); // Accès au contexte pour mise à jour
+  const { isLoggedIn, updateAuthContext, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await secureApiCall("/auth/profile");
-        setProfileData(response); // Met à jour les données locales de la page
-        updateAuthContext(response); // Met à jour le AuthContext
+        const response = await secureApiCall("/profile/");
+        setProfileData(response);
+        updateAuthContext(response);
       } catch (error) {
         console.error("Failed to fetch profile data:", error);
         logout();
@@ -25,56 +32,74 @@ const Profile = () => {
   }, [updateAuthContext, logout, navigate, isLoggedIn]);
 
   if (!profileData) {
-    return <div>Loading profile...</div>;
+    return <div className="text-white text-center mt-10">Loading profile...</div>;
   }
 
+  const defaultIcon = (
+    <div className="w-24 h-24 flex items-center justify-center bg-gray-700 text-white rounded-full">
+      <UserCircleIcon className="w-12 h-12" />
+    </div>
+  );
+
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Your Profile</h2>
-      <div className="space-y-2">
-        <p>
-          <strong>ID:</strong> {profileData.id || "N/A"}
-        </p>
-        <p>
-          <strong>Username:</strong> {profileData.username || "N/A"}
-        </p>
-        <p>
-          <strong>First Name:</strong> {profileData.first_name || "N/A"}
-        </p>
-        <p>
-          <strong>Last Name:</strong> {profileData.last_name || "N/A"}
-        </p>
-        <p>
-          <strong>Gender:</strong> {profileData.gender || "N/A"}
-        </p>
-        <p>
-          <strong>Sexual Preferences:</strong>{" "}
-          {profileData.sexual_preferences || "N/A"}
-        </p>
-        <p>
-          <strong>Biography:</strong> {profileData.biography || "N/A"}
-        </p>
-        <p>
-          <strong>Interests:</strong>{" "}
-          {profileData.interests
-            ? JSON.parse(profileData.interests).join(", ")
-            : "N/A"}
-        </p>
-        <div>
-          <strong>Profile Pictures:</strong>
-          {profileData.profile_pictures ? (
-            JSON.parse(profileData.profile_pictures).map((picture, index) => (
-              <div key={index} className="mt-2">
-                <img
-                  src={picture}
-                  alt={`Profile Picture ${index + 1}`}
-                  className="w-24 h-24 object-cover rounded-md shadow-md"
-                />
-              </div>
-            ))
-          ) : (
-            <p>N/A</p>
-          )}
+    <div className="min-h-screen bg-gray-950 text-white p-6">
+      {/* Photo de profil */}
+      <div className="flex justify-center mb-8">
+        {profileData.profile_pictures ? (
+          <div className="w-32 h-32 rounded-full overflow-hidden shadow-lg">
+            <img
+              src={JSON.parse(profileData.profile_pictures)[0]}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          defaultIcon
+        )}
+      </div>
+
+      {/* Informations du profil */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Champs du profil */}
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <IdentificationIcon className="w-6 h-6 text-red-500" />
+          <p>
+            <strong>Username:</strong> {profileData.username || "N/A"}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <GlobeAltIcon className="w-6 h-6 text-red-500" />
+          <p>
+            <strong>Gender:</strong> {profileData.gender || "N/A"}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <CalendarDaysIcon className="w-6 h-6 text-red-500" />
+          <p>
+            <strong>Birthday:</strong> {profileData.birthday || "N/A"}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <HeartIcon className="w-6 h-6 text-red-500" />
+          <p>
+            <strong>Sexual Preferences:</strong>{" "}
+            {profileData.sexual_preferences || "N/A"}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <UserCircleIcon className="w-6 h-6 text-red-500" />
+          <p>
+            <strong>Biography:</strong> {profileData.biography || "N/A"}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <UserCircleIcon className="w-6 h-6 text-red-500" />
+          <p>
+            <strong>Interests:</strong>{" "}
+            {profileData.interests
+              ? JSON.parse(profileData.interests).join(", ")
+              : "N/A"}
+          </p>
         </div>
       </div>
     </div>

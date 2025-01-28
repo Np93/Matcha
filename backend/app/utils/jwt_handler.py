@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from app.config import settings
 from fastapi import Response, HTTPException, Request
-from app.user_service import get_user_by_id
+from app.user.user_service import get_user_by_id
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
@@ -16,7 +16,6 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
         "exp": int(expire.timestamp()),
         "iat": int(now.timestamp())
     })
-    print(f"print info de to_encode dans create_access_token: {to_encode}")
     encoded_jwt = jwt.encode(to_encode, settings.api_secret, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
@@ -51,19 +50,16 @@ async def verify_user_from_token(request: Request, token_key: str = "access_toke
 
     try:
         # Décoder le token
-        print("ok")
         print(f"Token reçu : {token}")
         payload = jwt.decode(token, settings.api_secret, algorithms=[settings.jwt_algorithm])
     
-        print("ca ete decoder")
         user_id = payload.get("sub")
-        print(user_id)
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token payload")
-        print("not user id")
+
         # Vérifier si l'utilisateur est actif
         user = await get_user_by_id(user_id)
-        print("user")
+
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         if not user["status"]:

@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, String, ForeignKey, MetaData
+from sqlalchemy import Table, Column, Integer, String, ForeignKey, MetaData, Date
 
 metadata = MetaData()
 
@@ -10,5 +10,6 @@ profiles_table = Table(
     Column("sexual_preferences", String, nullable=True),
     Column("biography", String, nullable=True),
     Column("interests", String, nullable=True),  # Stockez les tags sous forme de chaîne JSON
+    Column("birthday", Date, nullable=True),
     # Column("profile_pictures", String, nullable=True),  # Stockez les chemins des images
 )

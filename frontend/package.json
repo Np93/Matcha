@@ -13,9 +13,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "axios": "^1.7.9",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "react": "^19.0.0",
+    "react-datepicker": "^7.6.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.28.2",
     "react-scripts": "^5.0.1"

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../utils/api";
+// import { login } from "../utils/api";
+import { apiCall } from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 import backgroundImage from "../assets/images/background_login.jpg";
 
@@ -13,7 +14,10 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await login(email, password); // Retourne { id, token }
+        const response = await apiCall("/auth/login", "POST", {
+          email,
+          password,
+        });
       console.log(response)
       updateAuthContext(response); // Met à jour l'état global avec l'ID utilisateur
       navigate("/profile");

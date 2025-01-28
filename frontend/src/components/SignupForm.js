@@ -22,7 +22,7 @@ const SignupForm = () => {
     }
 
     try {
-      const response = await apiCall("http://localhost:8000/auth/signup", "POST", {
+      const response = await apiCall("/auth/signup", "POST", {
         email,
         password,
         first_name: firstName,

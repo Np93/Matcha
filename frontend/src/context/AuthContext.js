@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const response = await secureApiCall("/auth/status"); // Vérifie si le token est valide
+        const response = await secureApiCall("/log/status"); // Vérifie si le token est valide
         setIsLoggedIn(true);
         setUserId(response.id);
       } catch (error) {

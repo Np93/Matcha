@@ -2,16 +2,23 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { secureApiCall } from "../utils/api";
+import {
+  BellIcon,
+  UserCircleIcon,
+  HeartIcon,
+  ChatBubbleLeftEllipsisIcon,
+  Cog6ToothIcon,
+} from "@heroicons/react/24/solid"; 
 
 const Navbar = () => {
-  const { isLoggedIn, userId, logout } = useAuth(); // Utilisation du AuthContext
+  const { isLoggedIn, userId, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       console.log("User ID during logout:", userId);
-      await secureApiCall("/auth/logout", "POST", null, userId); // Déconnexion côté backend
+      await secureApiCall("/log/logout", "POST", null, userId); // Déconnexion côté backend
       logout(); // Met à jour le contexte pour indiquer la déconnexion
       navigate("/"); // Redirige vers la page d'accueil
     } catch (error) {
@@ -50,7 +57,7 @@ const Navbar = () => {
                       Login
                     </Link>
                   </li>
-                  <li>
+                  <li className="border-b border-gray-500 border-opacity-30">
                     <Link
                       to="/signup"
                       className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white"
@@ -77,28 +84,29 @@ const Navbar = () => {
               to="/profile"
               className="flex items-center space-x-2 text-white hover:text-gray-400"
             >
-              <span>👤</span>
+              <BellIcon className="w-5 h-5" />
+              <UserCircleIcon className="w-5 h-5" />
               <span>Profile</span>
             </Link>
             <Link
               to="/match"
               className="flex items-center space-x-2 text-white hover:text-gray-400"
             >
-              <span>❤️</span>
+              <HeartIcon className="w-5 h-5" />
               <span>Match</span>
             </Link>
             <Link
               to="/chat"
               className="flex items-center space-x-2 text-white hover:text-gray-400"
             >
-              <span>💬</span>
+              <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
               <span>Chat</span>
             </Link>
             <Link
               to="/settings"
               className="flex items-center space-x-2 text-white hover:text-gray-400"
             >
-              <span>⚙️</span>
+              <Cog6ToothIcon className="w-5 h-5" />
               <span>Setting</span>
             </Link>
             <button
