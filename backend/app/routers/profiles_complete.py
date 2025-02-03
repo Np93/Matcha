@@ -17,7 +17,7 @@ async def complete_profile(request: Request):
     body = await request.json()
 
     user_id = await verify_user_from_token(request)  # Vérifie l'utilisateur
-
+    print("c'est pas le token tout bon")
     gender = body.get("gender")
     sexual_preferences = body.get("sexual_preferences")
     biography = body.get("biography", "")

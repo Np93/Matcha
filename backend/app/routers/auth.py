@@ -56,15 +56,15 @@ async def login(request: Request, response: Response):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
-        samesite="Strict"
+        secure=False, # True
+        samesite="lax" # "Strict"
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="Strict"
+        secure=False, # True
+        samesite="lax" # "Strict"
     )
 
     print(f"DEBUG: Token generated and set in cookie for user: {email}")  # Log du token généré
@@ -116,16 +116,16 @@ async def signup(request: Request, response: Response):
     response.set_cookie(
         key="access_token", 
         value=access_token, 
-        httponly=True, 
-        secure=True, 
-        samesite="Strict"
+        httponly=True,
+        secure=False, # True
+        samesite="lax" # "Strict"
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="Strict"
+        secure=False, # True
+        samesite="lax" # "Strict"
     )
 
     return {

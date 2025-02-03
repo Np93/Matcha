@@ -81,10 +81,15 @@ const Navbar = () => {
           <>
             {/* Boutons pour état connecté */}
             <Link
-              to="/profile"
+              to="/notification"
               className="flex items-center space-x-2 text-white hover:text-gray-400"
             >
               <BellIcon className="w-5 h-5" />
+            </Link>
+            <Link
+              to="/profile"
+              className="flex items-center space-x-2 text-white hover:text-gray-400"
+            >
               <UserCircleIcon className="w-5 h-5" />
               <span>Profile</span>
             </Link>

@@ -45,6 +45,7 @@ async def verify_user_from_token(request: Request, token_key: str = "access_toke
     """
     # Récupérer le token depuis les cookies
     token = request.cookies.get(token_key)
+    print(token)
     if not token:
         raise HTTPException(status_code=401, detail=f"Missing {token_key}")
 
@@ -67,5 +68,23 @@ async def verify_user_from_token(request: Request, token_key: str = "access_toke
         # Retourner les informations utilisateur
         return user
     
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+async def verify_user_from_socket_token(token):
+    try:
+        print("token dans sockey_tocken", token)
+        payload = jwt.decode(token, settings.api_secret, algorithms=[settings.jwt_algorithm])
+        
+        user_id = payload.get("sub")
+        if not user_id:
+                raise HTTPException(status_code=401, detail="Invalid token payload")
+        user = await get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if not user["status"]:
+            raise HTTPException(status_code=401, detail="User is not online")
+        return user
+
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")

@@ -23,8 +23,8 @@ async def refresh_token(request: Request, response: Response):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,
-        samesite="Strict"
+        secure=False, # True
+        samesite="lax" # "Strict"
     )
 
     return {"message": "Access token refreshed"}

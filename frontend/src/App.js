@@ -5,6 +5,9 @@ import Navbar from "./components/Navbar";
 import Signup from "./components/SignupForm";
 import Login from "./components/LoginForm";
 import Profile from "./components/Profile";
+import Chat from "./components/Chat";
+import Match from "./components/Match";
+import ProfileUser from "./components/ProfileUser";
 import CompleteProfile from "./components/CompleteProfile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
@@ -37,6 +40,15 @@ const App = () => {
               path="/profile"
               element={<ProtectedRoute element={Profile} />}
             />
+            <Route
+              path="/chat"
+              element={<ProtectedRoute element={Chat} />}
+            />
+            <Route
+              path="/match"
+              element={<ProtectedRoute element={Match} />}
+            />
+            <Route path="/profile/:username" element={<ProfileUser />} />
             <Route path="/complete-profile" element={<ProtectedRoute element={CompleteProfile} />} />
             {/* Ajoutez d'autres routes protégées ici */}
           </Routes>
