@@ -12,8 +12,8 @@ const Chat = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [typingUsers, setTypingUsers] = useState({}); // Stocke les utilisateurs qui tapent
-  const [typingDots, setTypingDots] = useState(""); // Animation des points
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [typingDots, setTypingDots] = useState("");
   const socket = useRef(null);
   const messagesEndRef = useRef(null);
   let typingTimeout = useRef(null);
@@ -33,11 +33,16 @@ const Chat = () => {
     socket.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if ("typing" in data) {
-        setTypingUsers((prev) => ({
-          ...prev,
-          [data.user_id]: data.typing ? data.username : null,
-        }));
+      if (data.event === "typing") {
+        setTypingUsers((prev) => {
+          const updatedUsers = new Set(prev);
+          if (data.typing) {
+            updatedUsers.add(data.username);
+          } else {
+            updatedUsers.delete(data.username);
+          }
+          return new Set(updatedUsers);
+        });
       } else {
         setMessages((prev) => [...prev, data]);
         scrollToBottom();
@@ -48,6 +53,16 @@ const Chat = () => {
       console.log("WebSocket fermé");
     };
   };
+
+  //  **Fermeture propre de la WebSocket lorsque l'on quitte le chat**
+  useEffect(() => {
+    return () => {
+      if (socket.current) {
+        console.log("Fermeture de la WebSocket...");
+        socket.current.close();
+      }
+    };
+  }, []);
 
   // Récupération des conversations
   useEffect(() => {
@@ -62,7 +77,7 @@ const Chat = () => {
     fetchConversations();
   }, []);
 
-  // Récupération des messages de la conversation sélectionnée
+  // Récupération des messages et connexion WebSocket
   useEffect(() => {
     if (selectedChat) {
       const fetchMessages = async () => {
@@ -76,6 +91,12 @@ const Chat = () => {
         }
       };
       fetchMessages();
+    } else {
+      // 🔴 Fermer la WebSocket si l'utilisateur quitte la conversation
+      if (socket.current) {
+        console.log("Fermeture de la WebSocket car plus de chat sélectionné...");
+        socket.current.close();
+      }
     }
   }, [selectedChat]);
 
@@ -90,7 +111,7 @@ const Chat = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Envoi d'un message via API
+  // Envoi d'un message
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
 
@@ -115,26 +136,23 @@ const Chat = () => {
     setNewMessage(event.target.value);
     if (!selectedChat) return;
 
-    // Déclenche la notification de frappe uniquement s'il y a du texte
     const isTyping = event.target.value.trim().length > 0;
     notifyTyping(isTyping);
-
-    // Empêche l'envoi trop fréquent de notifications
-    clearTimeout(typingTimeout.current);
-    typingTimeout.current = setTimeout(() => {
-      notifyTyping(false);
-    }, 3000);
   };
 
-  // Fonction pour envoyer la notification de frappe
-  const notifyTyping = (isTyping) => {
-    secureApiCall("/chat/typing", "POST", {
-      chat_id: selectedChat.id,
-      is_typing: isTyping,
-    });
+  // Notification de frappe
+  const notifyTyping = async (isTyping) => {
+    try {
+      await secureApiCall("/chat/typing", "POST", {
+        chat_id: selectedChat.id,
+        is_typing: isTyping,
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du typing status:", error);
+    }
   };
 
-  // Gestion de l'envoi via Enter
+  // Envoi avec Enter
   const handleKeyPress = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -142,7 +160,7 @@ const Chat = () => {
     }
   };
 
-  // Fonction pour scroller vers le bas
+  // Scroll automatique
   const scrollToBottom = () => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -151,7 +169,7 @@ const Chat = () => {
 
   return (
     <div className="flex h-screen bg-gray-900 text-white">
-      {/* Liste des discussions */}
+      {/* Liste des conversations */}
       <div className="w-1/3 border-r border-gray-700 overflow-y-auto p-4">
         <h2 className="text-xl font-bold mb-4">Discussions</h2>
         {conversations.map((chat) => (
@@ -177,7 +195,7 @@ const Chat = () => {
       </div>
 
       {/* Fenêtre de chat */}
-      <div className="w-2/3 flex flex-col">
+      <div className="w-2/3 flex flex-col relative">
         {selectedChat ? (
           <>
             <div className="p-4 border-b border-gray-700">
@@ -185,52 +203,43 @@ const Chat = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 p-4 overflow-y-auto relative" style={{ maxHeight: "calc(100vh - 120px)" }}>
+            <div className="flex-1 p-4 overflow-y-auto relative">
               {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`max-w-xs break-words p-3 rounded-md mb-2 
-                    ${msg.sender_id === userId ? "bg-red-500 ml-auto" : "bg-gray-700 mr-auto"}`}
-                >
+                <div key={index} className={`max-w-xs break-words p-3 rounded-md mb-2 
+                    ${msg.sender_id === userId ? "bg-red-500 ml-auto" : "bg-gray-700 mr-auto"}`}>
                   {msg.content}
                 </div>
               ))}
-
-              {/* Indicateur de saisie (en bas à gauche) */}
-              {Object.values(typingUsers).filter(Boolean).map((username, index) => (
-                <div key={index} className="absolute bottom-4 left-4 text-gray-400 text-sm">
-                  {username} est en train d'écrire{typingDots}
-                </div>
-              ))}
-
-              {/* Référence pour scroller vers le dernier message */}
               <div ref={messagesEndRef}></div>
             </div>
 
-            {/* Barre de saisie */}
-            <div className="p-4 flex items-center border-t border-gray-700">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={handleTyping}
-                onKeyDown={handleKeyPress}
-                placeholder="Tapez votre message..."
-                className="flex-1 bg-transparent border border-gray-600 rounded-md p-2 focus:outline-none"
-              />
-              <button
-                onClick={sendMessage}
-                className="ml-4 bg-red-500 hover:bg-red-600 p-2 rounded-md"
-              >
-                <PaperAirplaneIcon className="w-6 h-6 text-white" />
-              </button>
+            {/* Barre de saisie + Indicateur de frappe */}
+            <div className="p-4 border-t border-gray-700">
+              {typingUsers.size > 0 && (
+                <div className="text-gray-400 text-sm mb-1">
+                  {Array.from(typingUsers).join(", ")} est en train d'écrire{typingDots}
+                </div>
+              )}
+
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={handleTyping}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Tapez votre message..."
+                  className="flex-1 bg-transparent border border-gray-600 rounded-md p-2 focus:outline-none"
+                />
+                <button
+                  onClick={sendMessage}
+                  className="ml-4 bg-red-500 hover:bg-red-600 p-2 rounded-md"
+                >
+                  <PaperAirplaneIcon className="w-6 h-6 text-white" />
+                </button>
+              </div>
             </div>
           </>
-        ) : (
-          <div className="flex items-center justify-center flex-1">
-            <ChatBubbleOvalLeftEllipsisIcon className="w-20 h-20 text-gray-500" />
-            <p className="ml-4 text-gray-400">Sélectionnez une discussion</p>
-          </div>
-        )}
+        ) : <p>Sélectionnez une conversation</p>}
       </div>
     </div>
   );

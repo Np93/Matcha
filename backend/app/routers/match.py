@@ -5,6 +5,8 @@ from app.tables.users import users_table
 from app.tables.chat import conversations_table
 from app.tables.profile import profiles_table
 from app.tables.likes import likes_table
+from app.user.user_service import get_user_by_id
+from app.routers.notifications import send_notification
 from sqlalchemy.sql import text
 import json
 
@@ -35,6 +37,7 @@ async def like_profile(request: Request, data: dict):
     user = await verify_user_from_token(request)
     liker_id = user["id"]
     liked_id = data.get("targetId")
+    user_liked = await get_user_by_id(liked_id)
 
     if liker_id == liked_id:
         raise HTTPException(status_code=400, detail="You cannot like yourself")
@@ -64,6 +67,21 @@ async def like_profile(request: Request, data: dict):
                     ON CONFLICT DO NOTHING
                 """)
                 await session.execute(create_chat_query, {"user1_id": liker_id, "user2_id": liked_id})
+                
+                # Enregistre la notification de match pour les deux utilisateurs
+                await send_notification(
+                    receiver_id=liker_id,
+                    sender_id=liked_id,
+                    notification_type="match",
+                    context=f"Vous avez matché avec {user_liked['username']} ! 🎉"
+                )
+
+                await send_notification(
+                    receiver_id=liked_id,
+                    sender_id=liker_id,
+                    notification_type="match",
+                    context=f"Vous avez matché avec {user['username']} ! 🎉"
+                )
                 return {"matched": True}
 
     return {"matched": False}

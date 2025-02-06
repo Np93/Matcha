@@ -2,6 +2,7 @@ from app.utils.jwt_handler import verify_user_from_token
 from fastapi import APIRouter, HTTPException, Request, Response
 from app.profile.profile_service import get_profile_by_user_id
 from app.user.user_service import get_user_by_id
+from app.routers.notifications import send_notification
 import logging
 import re
 
@@ -36,6 +37,13 @@ async def get_user_profile(user_id: int, request: Request):
     user = await get_user_by_id(user_id)
     if not profile_data:
         raise HTTPException(status_code=404, detail="Profile not found")
+
+    await send_notification(
+        receiver_id=user_id,  # Celui qui reçoit la notif (le propriétaire du profil visité)
+        sender_id=user_requesting["id"],    # Celui qui visite le profil
+        notification_type="visite",
+        context=f"{user_requesting['username']} a visité votre profil."
+    )
 
     return {
         "id": user_id,

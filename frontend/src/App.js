@@ -7,6 +7,7 @@ import Login from "./components/LoginForm";
 import Profile from "./components/Profile";
 import Chat from "./components/Chat";
 import Match from "./components/Match";
+import Notif from "./components/NotificationsPage";
 import ProfileUser from "./components/ProfileUser";
 import CompleteProfile from "./components/CompleteProfile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -47,6 +48,10 @@ const App = () => {
             <Route
               path="/match"
               element={<ProtectedRoute element={Match} />}
+            />
+            <Route
+              path="/notification"
+              element={<ProtectedRoute element={Notif} />}
             />
             <Route path="/profile/:username" element={<ProfileUser />} />
             <Route path="/complete-profile" element={<ProtectedRoute element={CompleteProfile} />} />

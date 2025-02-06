@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { secureApiCall } from "../utils/api";
@@ -13,14 +13,68 @@ import {
 const Navbar = () => {
   const { isLoggedIn, userId, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const socket = useRef(null);
   const navigate = useNavigate();
 
+  //  Connexion WebSocket pour écouter les nouvelles notifications
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    console.log("Tentative de connexion WebSocket...");
+    
+    socket.current = new WebSocket(`ws://localhost:8000/notifications/ws/notifications`);
+    
+    socket.current.onopen = () => {
+      console.log("✅ WebSocket connecté avec succès !");
+    };
+
+    socket.current.onmessage = (event) => {
+      // console.log("📩 Notification reçue :", event.data);
+      setUnreadCount((prev) => prev + 1); // Incrémente le nombre de notifications non lues
+    };
+
+    socket.current.onerror = (error) => {
+      console.error("❌ Erreur WebSocket :", error);
+    };
+  
+    socket.current.onclose = (event) => {
+      console.warn("⚠️ WebSocket fermée :", event.reason);
+    };
+
+    return () => {
+      console.log("🔌 Fermeture de la WebSocket..."); 
+      socket.current?.close()}; // Ferme la connexion WebSocket quand le composant est démonté
+  }, [isLoggedIn]);
+
+  //  Récupération des notifications non lues lors du chargement
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await secureApiCall("/notifications/notifications");
+        setUnreadCount(response.filter((n) => !n.is_read).length);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des notifications :", error);
+      }
+    };
+    fetchUnreadCount();
+  }, [isLoggedIn]);
+
+  //  Fonction pour marquer les notifications comme lues lors du clic sur la cloche
+  const handleBellClick = () => {
+    navigate("/notification");
+    setUnreadCount(0); // Remet à zéro après la consultation
+  };
+
+  //  Déconnexion
   const handleLogout = async () => {
     try {
       console.log("User ID during logout:", userId);
-      await secureApiCall("/log/logout", "POST", null, userId); // Déconnexion côté backend
-      logout(); // Met à jour le contexte pour indiquer la déconnexion
-      navigate("/"); // Redirige vers la page d'accueil
+      await secureApiCall("/log/logout", "POST", null, userId);
+      logout();
+      navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -80,12 +134,14 @@ const Navbar = () => {
         ) : (
           <>
             {/* Boutons pour état connecté */}
-            <Link
-              to="/notification"
-              className="flex items-center space-x-2 text-white hover:text-gray-400"
-            >
-              <BellIcon className="w-5 h-5" />
-            </Link>
+            <button onClick={handleBellClick} className="relative p-2">
+              <BellIcon className="w-6 h-6 text-white hover:text-gray-400" />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
             <Link
               to="/profile"
               className="flex items-center space-x-2 text-white hover:text-gray-400"
