@@ -4,14 +4,37 @@ import { secureApiCall } from "../utils/api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+const predefinedInterests = [
+  "Vegan", "Geek", "Music", "Travel", "Sport", "Photography",
+  "Art", "Gaming", "Coding", "Anime", "Piercing", "Cooking",
+];
+
 const CompleteProfile = () => {
   const [gender, setGender] = useState("");
   const [sexualPreferences, setSexualPreferences] = useState("");
   const [biography, setBiography] = useState("");
-  const [interests, setInterests] = useState("");
+  const [selectedInterests, setSelectedInterests] = useState([]);
+  const [customInterest, setCustomInterest] = useState("");
   const [birthday, setBirthday] = useState(null); // Stocke la date d'anniversaire
   const navigate = useNavigate();
 
+    //  Gérer la sélection/désélection d'un intérêt
+    const toggleInterest = (interest) => {
+      setSelectedInterests((prev) =>
+        prev.includes(interest)
+          ? prev.filter((item) => item !== interest) // Retire l'intérêt si déjà sélectionné
+          : [...prev, interest] // Ajoute l'intérêt
+      );
+    };
+  
+    //  Ajouter un intérêt personnalisé
+    const addCustomInterest = () => {
+      if (customInterest.trim() && !selectedInterests.includes(customInterest)) {
+        setSelectedInterests([...selectedInterests, customInterest.trim()]);
+        setCustomInterest(""); // Réinitialise le champ
+      }
+    };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -29,7 +52,7 @@ const CompleteProfile = () => {
         gender,
         sexual_preferences: sexualPreferences,
         biography,
-        interests: interests.split(",").map((tag) => tag.trim()), // Transforme en tableau
+        interests: selectedInterests,
         birthday: formattedBirthday, // Ajoute la date de naissance formatée
       });
 
@@ -136,15 +159,53 @@ const CompleteProfile = () => {
 
           {/* Interests */}
           <div className="space-y-2 col-span-1 sm:col-span-2">
-            <label className="block text-white">
-              Interests (comma-separated tags):
-            </label>
-            <input
-              type="text"
-              value={interests}
-              onChange={(e) => setInterests(e.target.value)}
-              className="w-full bg-transparent text-white border border-gray-600 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            />
+            <label className="block text-white">Select Your Interests:</label>
+            <div className="flex flex-wrap gap-2">
+              {predefinedInterests.map((interest) => (
+                <button
+                  key={interest}
+                  type="button"
+                  onClick={() => toggleInterest(interest)}
+                  className={`px-3 py-1 text-sm rounded-md border transition ${
+                    selectedInterests.includes(interest)
+                      ? "bg-red-500 text-white border-red-500"
+                      : "bg-transparent text-gray-300 border-gray-500 hover:border-red-400 hover:text-red-400"
+                  }`}
+                >
+                  #{interest}
+                </button>
+              ))}
+            </div>
+
+            {/* Input pour ajouter des intérêts personnalisés */}
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="text"
+                value={customInterest}
+                onChange={(e) => setCustomInterest(e.target.value)}
+                className="flex-1 bg-transparent text-white border border-gray-600 rounded-md px-3 py-1"
+                placeholder="Add a custom interest..."
+              />
+              <button
+                type="button"
+                onClick={addCustomInterest}
+                className="bg-red-500 px-3 py-1 rounded-md text-white hover:bg-red-600"
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Affichage des intérêts sélectionnés */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {selectedInterests.map((interest, index) => (
+                <span
+                  key={index}
+                  className="bg-gray-700 text-white px-3 py-1 text-sm rounded-md"
+                >
+                  #{interest}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Submit Button */}

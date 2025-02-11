@@ -5,6 +5,7 @@ import {
   PaperAirplaneIcon,
   ChatBubbleOvalLeftEllipsisIcon,
 } from "@heroicons/react/24/solid";
+// import VideoCall from "./VideoCall";
 
 const Chat = () => {
   const { userId } = useAuth();
@@ -16,6 +17,7 @@ const Chat = () => {
   const [typingDots, setTypingDots] = useState("");
   const socket = useRef(null);
   const messagesEndRef = useRef(null);
+  // const [receiverId, setReceiverId] = useState(null);
   let typingTimeout = useRef(null);
 
   // Connexion WebSocket
@@ -167,6 +169,13 @@ const Chat = () => {
     }, 100);
   };
 
+  // formater l'heure
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  };
+
   return (
     <div className="flex h-screen bg-gray-900 text-white">
       {/* Liste des conversations */}
@@ -200,6 +209,8 @@ const Chat = () => {
           <>
             <div className="p-4 border-b border-gray-700">
               <h2 className="text-xl font-bold">{selectedChat.name}</h2>
+              {/* Bouton pour ouvrir la vidéo */}
+              {/* <VideoCall chatId={selectedChat.id} /> */}
             </div>
 
             {/* Messages */}
@@ -207,7 +218,11 @@ const Chat = () => {
               {messages.map((msg, index) => (
                 <div key={index} className={`max-w-xs break-words p-3 rounded-md mb-2 
                     ${msg.sender_id === userId ? "bg-red-500 ml-auto" : "bg-gray-700 mr-auto"}`}>
-                  {msg.content}
+                  <span className="text-left">{msg.content}</span>
+                  {/* Heure bien attachée au bas droit de la bulle */}
+                  <div className="flex justify-end mt-0.5">
+                    <span className="text-[10px] text-gray-300">{formatTime(msg.timestamp)}</span>
+                  </div>
                 </div>
               ))}
               <div ref={messagesEndRef}></div>

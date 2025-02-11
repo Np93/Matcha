@@ -8,6 +8,7 @@ import {
   GlobeAltIcon,
   IdentificationIcon,
   HeartIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline"; // https://heroicons.com/
 
 const Profile = () => {
@@ -92,14 +93,26 @@ const Profile = () => {
             <strong>Biography:</strong> {profileData.biography || "N/A"}
           </p>
         </div>
-        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
-          <UserCircleIcon className="w-6 h-6 text-red-500" />
-          <p>
-            <strong>Interests:</strong>{" "}
-            {profileData.interests
-              ? JSON.parse(profileData.interests).join(", ")
-              : "N/A"}
-          </p>
+        {/* Interests - Stylisation avec # et présentation sous forme de tags */}
+        <div className="bg-transparent border border-gray-700 shadow-lg rounded-md p-4 col-span-1 sm:col-span-2">
+          <div className="flex items-center gap-4 mb-2">
+            <SparklesIcon className="w-6 h-6 text-red-500" />
+            <strong>Interests:</strong>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {profileData.interests ? (
+              JSON.parse(profileData.interests).map((interest, index) => (
+                <span
+                  key={index}
+                  className="bg-gray-700 text-white px-3 py-1 text-sm rounded-md"
+                >
+                  #{interest}
+                </span>
+              ))
+            ) : (
+              <span className="text-gray-400">No interests added</span>
+            )}
+          </div>
         </div>
       </div>
     </div>

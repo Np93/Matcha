@@ -73,43 +73,6 @@ async def get_messages(conversation_id: int, request: Request):
     
     return messages
 
-# #  API pour envoyer un message et save dans la db
-# @router.post("/send")
-# async def send_message(request: Request, data: dict):
-#     """Stocke le message dans la DB et l’envoie via WebSocket si le destinataire est connecté."""
-#     user = await verify_user_from_token(request)
-#     sender_id = user["id"]
-#     conversation_id = data["chat_id"]
-#     content = data["content"]
-
-#     #  Stocker le message en DB
-#     async with async_session() as session:
-#         async with session.begin():
-#             insert_query = text("""
-#                 INSERT INTO messages (conversation_id, sender_id, content, timestamp, is_read) 
-#                 VALUES (:conversation_id, :sender_id, :content, NOW(), FALSE)
-#                 RETURNING id, timestamp
-#             """)
-#             result = await session.execute(insert_query, {
-#                 "conversation_id": conversation_id,
-#                 "sender_id": sender_id,
-#                 "content": content
-#             })
-#             message_id, timestamp = result.fetchone()
-
-#     #  Vérifier si l’autre utilisateur est connecté via WebSocket
-#     if conversation_id in active_connections:
-#         for user_socket in active_connections[conversation_id]:
-#             _, ws = user_socket
-#             await ws.send_text(json.dumps({
-#                 "id": message_id,
-#                 "sender_id": sender_id,
-#                 "content": content,
-#                 "timestamp": str(timestamp),
-#             }))
-
-#     return {"message": "Message sent successfully"}
-
 @router.post("/send")
 async def send_message(request: Request, data: dict):
     """Stocke le message dans la DB et l’envoie via WebSocket si le destinataire est connecté.
@@ -234,3 +197,112 @@ async def typing_status(request: Request, data: dict):
                 }))
 
     return {"message": "Typing status updated"}
+
+# @router.websocket("/ws/video/{conversation_id}")
+# async def websocket_video_endpoint(websocket: WebSocket, conversation_id: int):
+#     """ WebSocket pour les signaux WebRTC """
+#     await websocket.accept()
+    
+#     if conversation_id not in active_connections:
+#         active_connections[conversation_id] = []
+
+#     active_connections[conversation_id].append(websocket)
+
+#     try:
+#         while True:
+#             message = await websocket.receive_text()
+#             for ws in active_connections[conversation_id]:
+#                 if ws != websocket:
+#                     await ws.send_text(message)
+#     except WebSocketDisconnect:
+#         active_connections[conversation_id].remove(websocket)
+
+# active_call_sessions = {}
+
+# @router.websocket("/ws/call/{receiver_id}")
+# async def websocket_call(websocket: WebSocket, receiver_id: int):
+#     """ WebSocket pour gérer les appels en temps réel. """
+#     await websocket.accept()
+#     token = websocket.cookies.get("access_token")
+    
+#     if not token:
+#         await websocket.close(code=1008)
+#         return
+
+#     try:
+#         user = await verify_user_from_socket_token(token)
+#         caller_id = user["id"]
+#     except:
+#         await websocket.close(code=1008)
+#         return
+
+#     # Stocke la connexion pour cet utilisateur
+#     active_call_sessions[caller_id] = websocket
+
+#     # Envoi d'une notification à l'utilisateur appelé
+#     if receiver_id in active_call_sessions:
+#         await active_call_sessions[receiver_id].send_text(json.dumps({
+#             "event": "incoming_call",
+#             "caller_id": caller_id,
+#             "caller_name": user["username"]
+#         }))
+
+#     try:
+#         while True:
+#             message = await websocket.receive_text()
+#             if receiver_id in active_call_sessions:
+#                 await active_call_sessions[receiver_id].send_text(message)
+#     except WebSocketDisconnect:
+#         active_call_sessions.pop(caller_id, None)
+
+
+
+# active_call_sessions = {}
+
+# @router.websocket("/ws/call/{user_id}")
+# async def websocket_call(websocket: WebSocket, user_id: int):
+#     """ Gère l'appel vidéo en WebRTC entre deux utilisateurs via WebSockets """
+#     await websocket.accept()
+#     active_call_sessions[user_id] = websocket
+
+#     try:
+#         while True:
+#             message = await websocket.receive_text()
+#             data = json.loads(message)
+
+#             if data["event"] == "call_request":
+#                 # Vérifie si le destinataire est connecté
+#                 receiver_id = data["receiver_id"]
+#                 if receiver_id in active_call_sessions:
+#                     await active_call_sessions[receiver_id].send_text(json.dumps({
+#                         "event": "incoming_call",
+#                         "caller_id": user_id,
+#                         "caller_name": data["caller_name"]
+#                     }))
+
+#             elif data["event"] == "call_response":
+#                 # L'utilisateur appelé accepte ou refuse l'appel
+#                 caller_id = data["caller_id"]
+#                 if caller_id in active_call_sessions:
+#                     await active_call_sessions[caller_id].send_text(json.dumps({
+#                         "event": "call_response",
+#                         "accepted": data["accepted"]
+#                     }))
+
+#             elif data["event"] in ["offer", "answer", "candidate"]:
+#                 # Transmet l'ICE candidate, offer ou answer entre les utilisateurs
+#                 target_id = data["target_id"]
+#                 if target_id in active_call_sessions:
+#                     await active_call_sessions[target_id].send_text(json.dumps(data))
+
+#             elif data["event"] == "call_end":
+#                 # L'un des utilisateurs raccroche, ferme la connexion WebSocket
+#                 target_id = data["target_id"]
+#                 if target_id in active_call_sessions:
+#                     await active_call_sessions[target_id].send_text(json.dumps({"event": "call_end"}))
+#                     await active_call_sessions[target_id].close()
+#                     del active_call_sessions[target_id]
+
+#     except WebSocketDisconnect:
+#         if user_id in active_call_sessions:
+#             del active_call_sessions[user_id]
