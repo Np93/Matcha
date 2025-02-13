@@ -1,34 +1,83 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.utils.jwt_handler import verify_user_from_token
-from app.utils.database import async_session
+from app.utils.database import async_session, engine
 from app.tables.users import users_table
 from app.tables.chat import conversations_table
 from app.tables.profile import profiles_table
 from app.tables.likes import likes_table
 from app.user.user_service import get_user_by_id
+from app.profile.location_service import haversine
 from app.routers.notifications import send_notification
 from sqlalchemy.sql import text
 import json
 
 router = APIRouter()
 
-#  Récupérer tous les profils sauf celui de l'utilisateur connecté
 @router.get("/profiles")
 async def get_profiles(request: Request):
+    """Récupère tous les profils sauf celui de l'utilisateur connecté et calcule leur distance en km (arrondie)."""
     print("on est dans match/profiles")
+
+    # Vérifier l'utilisateur
     user = await verify_user_from_token(request)
     user_id = user["id"]  # ID de l'utilisateur connecté
-    async with async_session() as session:
-        async with session.begin(): # il faudra ajouter les photos par la suite
-            query = text("""
-            SELECT users.id, users.username 
+
+    # Récupérer la position du user connecté
+    user_location_query = text("SELECT latitude, longitude FROM locations WHERE user_id = :user_id;")
+    
+    async with engine.begin() as conn:
+        user_location_result = await conn.execute(user_location_query, {"user_id": user_id})
+        user_location = user_location_result.fetchone()
+
+        if not user_location:
+            raise HTTPException(status_code=404, detail="Localisation non trouvée pour cet utilisateur.")
+
+        user_lat, user_lon = user_location  # Extraction des coordonnées
+
+        # Récupérer les profils avec leurs coordonnées
+        profiles_query = text("""
+            SELECT users.id, users.username, locations.latitude, locations.longitude
             FROM users
             LEFT JOIN profiles ON users.id = profiles.user_id
-            WHERE users.id != :user_id
-            """)
-            result = await session.execute(query, {"user_id": user_id})
-            profiles = result.mappings().all()
-    return profiles
+            LEFT JOIN locations ON users.id = locations.user_id
+            WHERE users.id != :user_id;
+        """)
+
+        result = await conn.execute(profiles_query, {"user_id": user_id})
+        profiles = result.mappings().all()
+
+    # Appliquer la fonction `haversine()` en Python pour calculer la distance
+    profiles_with_distance = []
+    for profile in profiles:
+        if profile["latitude"] is not None and profile["longitude"] is not None:
+            distance_km = round(haversine(user_lat, user_lon, profile["latitude"], profile["longitude"]))  # Arrondi
+        else:
+            distance_km = None  # Si pas de coordonnées
+
+        profiles_with_distance.append({
+            "id": profile["id"],
+            "username": profile["username"],
+            "distance_km": distance_km  # Distance arrondie en km entiers
+        })
+
+    return profiles_with_distance
+# #  Récupérer tous les profils sauf celui de l'utilisateur connecté
+# @router.get("/profiles")
+# async def get_profiles(request: Request):
+#     print("on est dans match/profiles")
+#     user = await verify_user_from_token(request)
+#     user_id = user["id"]  # ID de l'utilisateur connecté
+#     async with async_session() as session:
+#         async with session.begin(): # il faudra ajouter les photos par la suite
+#             query = text("""
+#             SELECT users.id, users.username 
+#             FROM users
+#             LEFT JOIN profiles ON users.id = profiles.user_id
+#             WHERE users.id != :user_id
+#             """)
+#             result = await session.execute(query, {"user_id": user_id})
+#             profiles = result.mappings().all()
+#     return profiles
 
 
 #  Gérer les likes et création de chat si match

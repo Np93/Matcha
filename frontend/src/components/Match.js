@@ -62,6 +62,7 @@ const Match = () => {
 
               {/* Nom d'utilisateur */}
               <h3 className="text-lg font-semibold">{profile.username}</h3>
+              <p className="text-sm text-gray-300">{profile.distance_km} km</p>
 
               {/* Boutons d'action */}
               <div className="flex gap-4 mt-4">

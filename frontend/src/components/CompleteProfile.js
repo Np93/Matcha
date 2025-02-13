@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect  } from "react";
 import { useNavigate } from "react-router-dom";
 import { secureApiCall } from "../utils/api";
 import DatePicker from "react-datepicker";
+import { getUserLocation } from "../utils/getLocation";
 import "react-datepicker/dist/react-datepicker.css";
 
 const predefinedInterests = [
@@ -16,9 +17,17 @@ const CompleteProfile = () => {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [customInterest, setCustomInterest] = useState("");
   const [birthday, setBirthday] = useState(null); // Stocke la date d'anniversaire
+  const [location, setLocation] = useState(null);
   const navigate = useNavigate();
 
-    //  Gérer la sélection/désélection d'un intérêt
+    // Récupération de la localisation au chargement du composant
+    useEffect(() => {
+      getUserLocation()
+        .then(setLocation)
+        .catch((err) => console.error("Erreur localisation:", err));
+    }, []);
+
+    // Gérer la sélection/désélection d'un intérêt
     const toggleInterest = (interest) => {
       setSelectedInterests((prev) =>
         prev.includes(interest)
@@ -46,7 +55,7 @@ const CompleteProfile = () => {
 
     // Formater la date au format YYYY-MM-DD
     const formattedBirthday = birthday.toISOString().split("T")[0];
-    console.log(formattedBirthday);
+
     try {
       const response = await secureApiCall("/profiles_complete/", "POST", {
         gender,
@@ -54,6 +63,7 @@ const CompleteProfile = () => {
         biography,
         interests: selectedInterests,
         birthday: formattedBirthday, // Ajoute la date de naissance formatée
+        location: location ? { ...location } : null,
       });
 
       alert(response.message);
@@ -70,6 +80,11 @@ const CompleteProfile = () => {
         <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-white">
           Complete Your Profile
         </h2>
+        {location && (
+          <p className="text-center text-gray-300 mb-4">
+            🌍 Localisation détectée: {location.city}, {location.country}
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Gender */}
           <div className="space-y-2 col-span-1">

@@ -5,6 +5,7 @@ from sqlalchemy import MetaData
 from app.tables.users import metadata as users_metadata
 from app.tables.chat import metadata as chat_metadata
 from app.tables.likes import metadata as like_metadata
+from app.tables.locations import metadata as locations_metadata
 from app.tables.profile import metadata as profile_metadata
 from app.tables.notifications import metadata as notifications_metadata
 from app.tables.profile_pictures import metadata as profile_pictures_metadata
@@ -60,6 +61,10 @@ for table in like_metadata.tables.values():
 
 # Ajoute les tables des métadonnées des utilisateurs
 for table in notifications_metadata.tables.values():
+    table.tometadata(combined_metadata)
+
+# Ajoute les tables des métadonnées des utilisateurs
+for table in locations_metadata.tables.values():
     table.tometadata(combined_metadata)
 
 async def create_tables():
