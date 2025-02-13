@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from app.utils.validators import validate_email, validate_password
 from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username
 # from app.profile.profile_service import upsert_profile, get_profile_by_user_id
+from .email_service import send_verification_email, save_email_verification_token
 import logging
 import re
 
@@ -67,6 +68,8 @@ async def login(request: Request, response: Response):
         samesite="lax" # "Strict"
     )
 
+    
+
     print(f"DEBUG: Token generated and set in cookie for user: {email}")  # Log du token généré
 
     return {
@@ -128,6 +131,13 @@ async def signup(request: Request, response: Response):
         samesite="lax" # "Strict"
     )
 
+    token, _ = create_tokens(user["id"])  # Utilise le même token de création ou un token spécifique pour l'email
+    expiration_time = await save_email_verification_token(email, token)
+    print(f"✅ Token enregistré ! Expire à : {expiration_time}")
+    email_sent = await send_verification_email(email, token)
+    if not email_sent:
+        raise HTTPException(status_code=500, detail="Erreur lors de l'envoi de l'email de vérification.")
+        
     return {
         "id": user["id"],
     }

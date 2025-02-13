@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from app.routers import auth, profile, log, profiles_complete, chat, match, notifications
+from app.routers import auth, profile, log, profiles_complete, chat, match, notifications, email_service
 from app.config import settings
 from app.utils.database import create_tables
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,3 +33,5 @@ app.include_router(profiles_complete.router, prefix="/profiles_complete", tags=[
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(match.router, prefix="/match", tags=["match"])
 app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+# Inclure le routeur de confirmation d'email
+app.include_router(email_service.router, prefix="/email", tags=["email"])

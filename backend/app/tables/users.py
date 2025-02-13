@@ -14,4 +14,5 @@ users_table = Table(
     Column("password_hash", String, nullable=False),
     Column("created_at", DateTime, default=datetime.utcnow, nullable=False),
     Column("status", Boolean, default=False, nullable=False),
+    Column("email_verified", Boolean, default=False, nullable=False),
 )

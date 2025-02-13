@@ -16,8 +16,8 @@ async def verify_password(password: str, hashed_password: str) -> bool:
 async def add_user(email: str, username: str, first_name: str, last_name: str, password_hash: str):
     """Ajoute un utilisateur dans la base de données en SQL."""
     query = text("""
-    INSERT INTO users (email, username, first_name, last_name, password_hash, created_at, status)
-    VALUES (:email, :username, :first_name, :last_name, :password_hash, :created_at, :status);
+    INSERT INTO users (email, username, first_name, last_name, password_hash, created_at, status, email_verified)
+    VALUES (:email, :username, :first_name, :last_name, :password_hash, :created_at, :status, :email_verified);
     """)
     
     async with engine.begin() as conn:
@@ -28,7 +28,8 @@ async def add_user(email: str, username: str, first_name: str, last_name: str, p
             "last_name": last_name,
             "password_hash": password_hash,
             "created_at": datetime.utcnow(),
-            "status": True
+            "status": True,
+            "email_verified":False
         })
 
 async def get_user_by_email(email: str):

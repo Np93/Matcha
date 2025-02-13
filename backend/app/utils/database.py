@@ -9,6 +9,8 @@ from app.tables.locations import metadata as locations_metadata
 from app.tables.profile import metadata as profile_metadata
 from app.tables.notifications import metadata as notifications_metadata
 from app.tables.profile_pictures import metadata as profile_pictures_metadata
+# importation de la table
+from app.tables.email_verification import metadata as email_verification_metadata
 from dotenv import load_dotenv
 import os
 
@@ -65,6 +67,10 @@ for table in notifications_metadata.tables.values():
 
 # Ajoute les tables des métadonnées des utilisateurs
 for table in locations_metadata.tables.values():
+    table.tometadata(combined_metadata)
+
+# Ajout de la table email_verification
+for table in email_verification_metadata.tables.values():
     table.tometadata(combined_metadata)
 
 async def create_tables():

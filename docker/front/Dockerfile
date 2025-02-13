@@ -14,11 +14,11 @@
 # Utiliser une image Node.js
 FROM node:16
 
-# Définir le répertoire de travail
-WORKDIR /app
-
 # Copier uniquement package.json pour installer les dépendances
 COPY ./frontend/package.json ./frontend/package-lock.json ./
+
+# Définir le répertoire de travail
+WORKDIR /app
 
 # Installer les dépendances
 RUN npm install
