@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 // import { login } from "../utils/api";
-import { apiCall } from "../utils/api";
-import { useAuth } from "../context/AuthContext";
-import backgroundImage from "../assets/images/background_login.jpg";
+import { apiCall } from "../../../../utils/api";
+import { useAuth } from "../../../../context/AuthContext";
+import backgroundImage from "../../../../assets/images/background_login.jpg";
 
 const LoginForm = () => {
     const [email, setEmail] = useState("");

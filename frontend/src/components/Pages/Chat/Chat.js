@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { secureApiCall } from "../utils/api";
-import { useAuth } from "../context/AuthContext";
+import { secureApiCall } from "../../../utils/api";
+import { useAuth } from "../../../context/AuthContext";
 import {
   PaperAirplaneIcon,
   ChatBubbleOvalLeftEllipsisIcon,

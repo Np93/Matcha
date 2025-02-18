@@ -54,3 +54,16 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     return R * c  # Distance en kilomètres
+
+async def get_user_location(conn, user_id):
+    """Récupère la localisation (latitude, longitude) d'un utilisateur."""
+    query = text("""
+        SELECT latitude, longitude 
+        FROM locations 
+        WHERE user_id = :user_id;
+    """)
+    result = await conn.execute(query, {"user_id": user_id})
+    location = result.fetchone()
+    if not location:
+        raise Exception("Localisation non trouvée pour cet utilisateur.")
+    return location

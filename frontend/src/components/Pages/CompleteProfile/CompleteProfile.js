@@ -1,8 +1,8 @@
 import React, { useState, useEffect  } from "react";
 import { useNavigate } from "react-router-dom";
-import { secureApiCall } from "../utils/api";
+import { secureApiCall } from "../../../utils/api";
 import DatePicker from "react-datepicker";
-import { getUserLocation } from "../utils/getLocation";
+import { getUserLocation } from "../../../utils/getLocation";
 import "react-datepicker/dist/react-datepicker.css";
 
 const predefinedInterests = [

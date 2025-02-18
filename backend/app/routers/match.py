@@ -1,13 +1,12 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.utils.jwt_handler import verify_user_from_token
 from app.utils.database import async_session, engine
-from app.tables.users import users_table
-from app.tables.chat import conversations_table
-from app.tables.profile import profiles_table
-from app.tables.likes import likes_table
+from app.chat.chat_service import create_conversation
+from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles
 from app.user.user_service import get_user_by_id
-from app.profile.location_service import haversine
+from app.profile.location_service import haversine, get_user_location
 from app.routers.notifications import send_notification
+from app.profile.profile_service import get_profile_by_user_id
 from sqlalchemy.sql import text
 import json
 
@@ -15,74 +14,99 @@ router = APIRouter()
 
 @router.get("/profiles")
 async def get_profiles(request: Request):
-    """Récupère tous les profils sauf celui de l'utilisateur connecté et calcule leur distance en km (arrondie)."""
-    print("on est dans match/profiles")
-
-    # Vérifier l'utilisateur
+    """Récupère les profils selon les préférences avec enrichissement."""
     user = await verify_user_from_token(request)
-    user_id = user["id"]  # ID de l'utilisateur connecté
+    user_id = user["id"]
 
-    # Récupérer la position du user connecté
-    user_location_query = text("SELECT latitude, longitude FROM locations WHERE user_id = :user_id;")
-    
     async with engine.begin() as conn:
-        user_location_result = await conn.execute(user_location_query, {"user_id": user_id})
-        user_location = user_location_result.fetchone()
+        # Récupérer localisation user (via `locations_service`)
+        try:
+            user_lat, user_lon = await get_user_location(conn, user_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Localisation non trouvée.")
 
-        if not user_location:
-            raise HTTPException(status_code=404, detail="Localisation non trouvée pour cet utilisateur.")
+        # Récupérer profil user (via `profile_service`)
+        user_profile = await get_profile_by_user_id(user_id)
+        gender, preferences, user_interests = (
+            user_profile["gender"], 
+            user_profile["sexual_preferences"], 
+            user_profile["interests"]
+        )
 
-        user_lat, user_lon = user_location  # Extraction des coordonnées
+        # Récupérer profils likés (via `match_service`)
+        liked_user_ids = await get_liked_user_ids(conn, user_id)
 
-        # Récupérer les profils avec leurs coordonnées
-        profiles_query = text("""
-            SELECT users.id, users.username, locations.latitude, locations.longitude
-            FROM users
-            LEFT JOIN profiles ON users.id = profiles.user_id
-            LEFT JOIN locations ON users.id = locations.user_id
-            WHERE users.id != :user_id;
-        """)
+        # Récupérer profils selon préférences (via `match_service`)
+        profiles = await get_matching_profiles(conn, user_id, gender, preferences)
 
-        result = await conn.execute(profiles_query, {"user_id": user_id})
-        profiles = result.mappings().all()
+        # Ajouter distance, âge et tags communs (via `match_service`)
+        profiles_with_details = await enrich_profiles(
+            user_lat, user_lon, user_interests, liked_user_ids, profiles
+        )
 
-    # Appliquer la fonction `haversine()` en Python pour calculer la distance
-    profiles_with_distance = []
-    for profile in profiles:
-        if profile["latitude"] is not None and profile["longitude"] is not None:
-            distance_km = round(haversine(user_lat, user_lon, profile["latitude"], profile["longitude"]))  # Arrondi
-        else:
-            distance_km = None  # Si pas de coordonnées
+    return profiles_with_details
 
-        profiles_with_distance.append({
-            "id": profile["id"],
-            "username": profile["username"],
-            "distance_km": distance_km  # Distance arrondie en km entiers
-        })
+@router.get("/filter_profiles")
+async def filter_profiles(request: Request):
+    """Récupère les profils filtrés par âge, distance, célébrité et tags."""
+    # Récupérer les filtres envoyés (GET query params)
+    query_params = request.query_params
 
-    return profiles_with_distance
-# #  Récupérer tous les profils sauf celui de l'utilisateur connecté
-# @router.get("/profiles")
-# async def get_profiles(request: Request):
-#     print("on est dans match/profiles")
-#     user = await verify_user_from_token(request)
-#     user_id = user["id"]  # ID de l'utilisateur connecté
-#     async with async_session() as session:
-#         async with session.begin(): # il faudra ajouter les photos par la suite
-#             query = text("""
-#             SELECT users.id, users.username 
-#             FROM users
-#             LEFT JOIN profiles ON users.id = profiles.user_id
-#             WHERE users.id != :user_id
-#             """)
-#             result = await session.execute(query, {"user_id": user_id})
-#             profiles = result.mappings().all()
-#     return profiles
+    # Extraire les filtres avec valeurs par défaut
+    minAge = int(query_params.get("minAge", 18))
+    maxAge = int(query_params.get("maxAge", 99))
+    minDistance = int(query_params.get("minDistance", 0))
+    maxDistance = query_params.get("maxDistance", "world")
+    minFame = int(query_params.get("minFame", 1))
+    maxFame = int(query_params.get("maxFame", 5))
+    filterByTags = query_params.get("filterByTags", "false").lower() == "true"
+   
+    #Vérifier l'utilisateur connecté
+    user = await verify_user_from_token(request)
+    user_id = user["id"]
 
+    async with engine.begin() as conn:
+        # Récupérer localisation user (via `get_user_location`)
+        try:
+            user_lat, user_lon = await get_user_location(conn, user_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Localisation non trouvée.")
 
-#  Gérer les likes et création de chat si match
+        # Récupérer profil user (via `get_profile_by_user_id`)
+        user_profile = await get_profile_by_user_id(user_id)
+        gender, preferences, user_interests = (
+            user_profile["gender"], 
+            user_profile["sexual_preferences"], 
+            user_profile["interests"]
+        )
+
+        # Récupérer profils likés (via `get_liked_user_ids`)
+        liked_user_ids = await get_liked_user_ids(conn, user_id)
+
+        # Récupérer profils selon préférences (via `get_matching_profiles`)
+        profiles = await get_matching_profiles(conn, user_id, gender, preferences)
+
+        # Enrichir les profils avec distance, âge, tags (via `enrich_profiles`)
+        enriched_profiles = await enrich_profiles(
+            user_lat, user_lon, user_interests, liked_user_ids, profiles
+        )
+
+        # Filtrer selon critères fournis
+        filtered_profiles = [
+            profile for profile in enriched_profiles
+            if (
+                (minAge <= profile["age"] <= maxAge) and
+                # (minFame <= profile.get("fame_rating", 0) <= maxFame) and
+                (maxDistance == "world" or (minDistance <= profile["distance_km"] <= int(maxDistance))) and
+                (not filterByTags or profile["common_tags"] > 0)
+            )
+        ]
+
+    return filtered_profiles
+
 @router.post("/like")
 async def like_profile(request: Request, data: dict):
+    """Empêche de liker deux fois et crée une conversation en cas de match."""
     user = await verify_user_from_token(request)
     liker_id = user["id"]
     liked_id = data.get("targetId")
@@ -91,46 +115,31 @@ async def like_profile(request: Request, data: dict):
     if liker_id == liked_id:
         raise HTTPException(status_code=400, detail="You cannot like yourself")
 
-    async with async_session() as session:
-        async with session.begin():
-            # Vérifie si l'autre utilisateur a déjà liké
-            check_query = text("""
-                SELECT * FROM likes WHERE liker_id = :liked_id AND liked_id = :liker_id
-            """)
-            check_result = await session.execute(check_query, {"liked_id": liked_id, "liker_id": liker_id})
-            match_found = check_result.fetchone()
+    # Vérifie si l'utilisateur a déjà liké
+    if await check_same_like(liker_id, liked_id):
+        raise HTTPException(status_code=400, detail="You already liked this user")
 
-            # Insère le like avec created_at
-            insert_query = text("""
-                INSERT INTO likes (liker_id, liked_id, created_at)
-                VALUES (:liker_id, :liked_id, NOW())
-                ON CONFLICT DO NOTHING
-            """)
-            await session.execute(insert_query, {"liker_id": liker_id, "liked_id": liked_id})
+    # Insère le like
+    await insert_like(liker_id, liked_id)
 
-            # Crée une conversation si un match est trouvé
-            if match_found:
-                create_chat_query = text("""
-                    INSERT INTO conversations (user1_id, user2_id, created_at)
-                    VALUES (:user1_id, :user2_id, NOW())
-                    ON CONFLICT DO NOTHING
-                """)
-                await session.execute(create_chat_query, {"user1_id": liker_id, "user2_id": liked_id})
-                
-                # Enregistre la notification de match pour les deux utilisateurs
-                await send_notification(
-                    receiver_id=liker_id,
-                    sender_id=liked_id,
-                    notification_type="match",
-                    context=f"Vous avez matché avec {user_liked['username']} ! 🎉"
-                )
+    # Vérifie si c'est un match
+    if await check_match(liker_id, liked_id):
+        # Crée la conversation
+        await create_conversation(liker_id, liked_id)
 
-                await send_notification(
-                    receiver_id=liked_id,
-                    sender_id=liker_id,
-                    notification_type="match",
-                    context=f"Vous avez matché avec {user['username']} ! 🎉"
-                )
-                return {"matched": True}
+        # Notifications croisées
+        await send_notification(
+            receiver_id=liker_id,
+            sender_id=liked_id,
+            notification_type="match",
+            context=f"Vous avez matché avec {user_liked['username']} ! 🎉"
+        )
+        await send_notification(
+            receiver_id=liked_id,
+            sender_id=liker_id,
+            notification_type="match",
+            context=f"Vous avez matché avec {user['username']} ! 🎉"
+        )
+        return {"matched": True}
 
     return {"matched": False}

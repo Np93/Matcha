@@ -1,16 +1,16 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import Home from "./components/Home";
+import Home from "./components/Pages/Home/Home";
 import Navbar from "./components/Navbar";
-import Signup from "./components/SignupForm";
-import Login from "./components/LoginForm";
-import Profile from "./components/Profile";
-import Chat from "./components/Chat";
-import Match from "./components/Match";
-import Settings from "./components/Settings";
-import Notif from "./components/NotificationsPage";
-import ProfileUser from "./components/ProfileUser";
-import CompleteProfile from "./components/CompleteProfile";
+import Signup from "./components/Pages/Auth/Signup/SignupForm";
+import Login from "./components/Pages/Auth/Login/LoginForm";
+import Profile from "./components/Pages/Profile/ProfilePersonal/Profile";
+import Chat from "./components/Pages/Chat/Chat";
+import Match from "./components/Pages/Match/Match";
+import Settings from "./components/Pages/Setting/Settings";
+import Notif from "./components/Pages/Notification/NotificationsPage";
+import ProfileUser from "./components/Pages/Profile/ProfileOtherUser/ProfileUser";
+import CompleteProfile from "./components/Pages/CompleteProfile/CompleteProfile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 const ProtectedRoute = ({ element: Component }) => {

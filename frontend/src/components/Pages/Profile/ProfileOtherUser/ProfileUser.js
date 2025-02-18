@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { secureApiCall } from "../utils/api";
+import { secureApiCall } from "../../../../utils/api";
 import {
   IdentificationIcon,
   CalendarDaysIcon,

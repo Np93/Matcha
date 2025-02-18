@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { secureApiCall } from "../utils/api";
+import { secureApiCall } from "../../../utils/api";
 import { useNavigate } from "react-router-dom";
 
 const NotificationsPage = () => {
@@ -11,7 +11,7 @@ const NotificationsPage = () => {
       try {
         // 1️ Récupération des notifications
         const response = await secureApiCall("/notifications/notifications");
-        console.log("Notifications récupérées :", response);
+        // console.log("Notifications récupérées :", response);
         setNotifications(response);
 
         // 2️ Filtrer les notifications non lues et récupérer leurs IDs
@@ -21,7 +21,6 @@ const NotificationsPage = () => {
 
         // 3️ Si des notifications sont non lues, les envoyer au backend pour les passer en "lues"
         if (unreadNotificationIds.length > 0) {
-            console.log("notif pas lue")
           await secureApiCall("/notifications/mark-read", "POST", {
             notification_ids: unreadNotificationIds,
           });

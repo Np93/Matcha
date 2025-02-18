@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiCall } from "../utils/api";
-import { useAuth } from "../context/AuthContext";
-import backgroundImage from "../assets/images/background_signup.jpg";
+import { apiCall } from "../../../../utils/api";
+import { useAuth } from "../../../../context/AuthContext";
+import backgroundImage from "../../../../assets/images/background_signup.jpg";
 
 const SignupForm = () => {
   const [email, setEmail] = useState("");

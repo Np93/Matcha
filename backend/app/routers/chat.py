@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.chat.chat_service import get_conversation, create_conversation, save_message
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
 from sqlalchemy.sql import text
-from app.tables.chat import messages_table, conversations_table
 from app.routers.notifications import send_notification
 from app.utils.database import async_session
 from jose import JWTError, jwt
@@ -78,13 +76,13 @@ async def send_message(request: Request, data: dict):
     """Stocke le message dans la DB et l’envoie via WebSocket si le destinataire est connecté.
        Si le destinataire est hors ligne, une notification lui est envoyée.
     """
-    # 🔹 Vérifier l'utilisateur à partir du token
+    # Vérifier l'utilisateur à partir du token
     user = await verify_user_from_token(request)
     sender_id = user["id"]
     conversation_id = data["chat_id"]
     content = data["content"]
 
-    # 🔹 Récupérer l'autre utilisateur de la conversation
+    # Récupérer l'autre utilisateur de la conversation
     async with async_session() as session:
         async with session.begin():
             query = text("""
@@ -99,7 +97,7 @@ async def send_message(request: Request, data: dict):
             # Déterminer qui est le destinataire
             receiver_id = conversation.user1_id if conversation.user2_id == sender_id else conversation.user2_id
 
-    # 🔹 Stocker le message en base de données
+    # Stocker le message en base de données
     async with async_session() as session:
         async with session.begin():
             insert_query = text("""
@@ -114,7 +112,7 @@ async def send_message(request: Request, data: dict):
             })
             message_id, timestamp = result.fetchone()
 
-    # 🔹 Envoyer le message à l'expéditeur (assurer qu'il voit son propre message)
+    # Envoyer le message à l'expéditeur (assurer qu'il voit son propre message)
     if conversation_id in active_connections:
         for user_socket in active_connections[conversation_id]:
             user_socket_id, ws = user_socket
@@ -126,7 +124,7 @@ async def send_message(request: Request, data: dict):
                     "timestamp": str(timestamp),
                 }))
 
-    # 🔹 Vérifier si le destinataire est connecté et lui envoyer le message en direct
+    # Vérifier si le destinataire est connecté et lui envoyer le message en direct
     recipient_connected = False
     if conversation_id in active_connections:
         for user_socket in active_connections[conversation_id]:
@@ -140,7 +138,7 @@ async def send_message(request: Request, data: dict):
                     "timestamp": str(timestamp),
                 }))
 
-    # 🔹 Si le destinataire est **hors ligne**, enregistrer une notification
+    # Si le destinataire est **hors ligne**, enregistrer une notification
     if not recipient_connected:
         await send_notification(
             receiver_id=receiver_id,  # Le destinataire reçoit la notification
