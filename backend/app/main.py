@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from app.routers import auth, profile, log, profiles_complete, chat, match, notifications
+from app.routers import auth, profile, log, profiles_complete, chat, match, notifications, setting
 from app.config import settings
 from app.utils.database import create_tables
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,4 +32,5 @@ app.include_router(profile.router, prefix="/profile", tags=["profile"])
 app.include_router(profiles_complete.router, prefix="/profiles_complete", tags=["profiles_complete"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(match.router, prefix="/match", tags=["match"])
+app.include_router(setting.router, prefix="/setting", tags=["setting"])
 app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])

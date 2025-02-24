@@ -13,6 +13,7 @@ import {
 const Navbar = () => {
   const { isLoggedIn, userId, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const socket = useRef(null);
   const navigate = useNavigate();
@@ -82,6 +83,10 @@ const Navbar = () => {
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const toggleSettingsDropdown = () => {
+    setIsSettingsDropdownOpen(!isSettingsDropdownOpen);
   };
 
   return (
@@ -163,13 +168,38 @@ const Navbar = () => {
               <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
               <span>Chat</span>
             </Link>
-            <Link
-              to="/settings"
-              className="flex items-center space-x-2 text-white hover:text-gray-400"
-            >
-              <Cog6ToothIcon className="w-5 h-5" />
-              <span>Setting</span>
-            </Link>
+            {/* ⚙️ Dropdown Settings */}
+            <div className="relative">
+              <button onClick={toggleSettingsDropdown} className="flex items-center space-x-2 text-white hover:text-gray-400">
+                <Cog6ToothIcon className="w-5 h-5" />
+                <span>Settings</span>
+              </button>
+              {isSettingsDropdownOpen && (
+                <ul className="absolute right-0 mt-2 bg-black bg-opacity-80 rounded-md shadow-lg w-56 border border-gray-600">
+                  <li className="border-b border-gray-500 border-opacity-30">
+                    <Link to="/settings/profile" className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white">
+                      Profile Settings
+                    </Link>
+                  </li>
+                  <li className="border-b border-gray-500 border-opacity-30">
+                    <Link to="/settings/pictures" className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white">
+                      Profile Pictures
+                    </Link>
+                  </li>
+                  <li className="border-b border-gray-500 border-opacity-30">
+                    <Link to="/settings/location" className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white">
+                      Location Settings
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/settings/account" className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white">
+                      Account Settings
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </div>
+
             <button
               onClick={handleLogout}
               className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-md hover:bg-gray-800 focus:outline-none"

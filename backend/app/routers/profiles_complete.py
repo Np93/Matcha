@@ -46,7 +46,8 @@ async def complete_profile(request: Request):
             latitude=location.get("latitude"),
             longitude=location.get("longitude"),
             city=location.get("city"),
-            country=location.get("country")
+            country=location.get("country"),
+            location_method=location.get("locationMethod"),
         )
 
     return {"id": user_id["id"]}

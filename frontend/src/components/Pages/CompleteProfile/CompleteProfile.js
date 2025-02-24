@@ -82,7 +82,7 @@ const CompleteProfile = () => {
         </h2>
         {location && (
           <p className="text-center text-gray-300 mb-4">
-            🌍 Localisation détectée: {location.city}, {location.country}
+            🌍 Localisation détectée: {location.city}, {location.country} ({location.locationMethod})
           </p>
         )}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">

@@ -18,6 +18,7 @@ export const getUserLocation = () => {
                 longitude,
                 city: data.address?.city || data.address?.town || data.address?.village || "Unknown",
                 country: data.address?.country || "Unknown",
+                locationMethod: "GPS",
               });
             } catch (err) {
               reject("Erreur lors de la récupération de la ville.");
@@ -35,6 +36,7 @@ export const getUserLocation = () => {
                 longitude: data.lon,
                 city: data.city,
                 country: data.country,
+                locationMethod: "IP",
               });
             } catch (err) {
               reject("Impossible d'obtenir la localisation.");

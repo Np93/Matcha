@@ -10,5 +10,6 @@ locations_table = Table(
     Column("longitude", Float, nullable=False),
     Column("city", String, nullable=True),
     Column("country", String, nullable=True),
+    Column("location_method", String, nullable=False, default="IP"),
     Column("last_updated", DateTime, default=func.now(), onupdate=func.now())
 )

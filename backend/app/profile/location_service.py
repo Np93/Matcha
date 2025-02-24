@@ -4,7 +4,7 @@ from app.utils.database import async_session
 from app.tables.locations import locations_table
 import math
 
-async def upsert_location(user_id: int, latitude: float, longitude: float, city: str, country: str):
+async def upsert_location(user_id: int, latitude: float, longitude: float, city: str, country: str, location_method: str):
     """Met à jour ou insère la localisation d'un utilisateur."""
     async with async_session() as session:
         async with session.begin():
@@ -17,7 +17,7 @@ async def upsert_location(user_id: int, latitude: float, longitude: float, city:
                 # Mise à jour de la localisation existante
                 update_query = text("""
                     UPDATE locations
-                    SET latitude = :latitude, longitude = :longitude, city = :city, country = :country, last_updated = NOW()
+                    SET latitude = :latitude, longitude = :longitude, city = :city, country = :country, location_method = :location_method, last_updated = NOW()
                     WHERE user_id = :user_id
                 """)
                 await session.execute(update_query, {
@@ -25,20 +25,22 @@ async def upsert_location(user_id: int, latitude: float, longitude: float, city:
                     "latitude": latitude,
                     "longitude": longitude,
                     "city": city,
-                    "country": country
+                    "country": country,
+                    "location_method": location_method
                 })
             else:
                 # Insertion d'une nouvelle localisation
                 insert_query = text("""
-                    INSERT INTO locations (user_id, latitude, longitude, city, country, last_updated)
-                    VALUES (:user_id, :latitude, :longitude, :city, :country, NOW())
+                    INSERT INTO locations (user_id, latitude, longitude, city, country, location_method, last_updated)
+                    VALUES (:user_id, :latitude, :longitude, :city, :country, :location_method, NOW())
                 """)
                 await session.execute(insert_query, {
                     "user_id": user_id,
                     "latitude": latitude,
                     "longitude": longitude,
                     "city": city,
-                    "country": country
+                    "country": country,
+                    "location_method": location_method
                 })
 
 def haversine(lat1, lon1, lat2, lon2):
