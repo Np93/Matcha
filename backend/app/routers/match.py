@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.utils.jwt_handler import verify_user_from_token
 from app.utils.database import async_session, engine
 from app.chat.chat_service import create_conversation
-from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles
+from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles
 from app.user.user_service import get_user_by_id
 from app.profile.location_service import haversine, get_user_location
 from app.routers.notifications import send_notification
@@ -44,7 +44,10 @@ async def get_profiles(request: Request):
             user_lat, user_lon, user_interests, liked_user_ids, profiles
         )
 
-    return profiles_with_details
+    # Trier les profils selon distance > tags > fame rating
+    sorted_profiles = await sort_profiles(profiles_with_details)
+
+    return sorted_profiles
 
 @router.get("/filter_profiles")
 async def filter_profiles(request: Request):

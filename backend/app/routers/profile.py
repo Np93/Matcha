@@ -50,5 +50,7 @@ async def get_user_profile(user_id: int, request: Request):
         "username": user["username"],
         "first_name": user["first_name"],
         "last_name": user["last_name"],
+        "status": user["status"],
+        "laste_connexion": user["laste_connexion"],
         **profile_data,
     }

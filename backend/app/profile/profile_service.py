@@ -5,7 +5,7 @@ from sqlalchemy.sql import text
 # from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
 # from app.tables.profile import profiles_table
-from app.utils.database import async_session, engine
+from app.utils.database import engine
 from fastapi import HTTPException
 
 async def upsert_profile(user_id: int, gender: str, sexual_preferences: str, biography: str, interests: list, birthday: str = None):

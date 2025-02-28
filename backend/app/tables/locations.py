@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, Float, String, ForeignKey, DateTime, func, MetaData
+from sqlalchemy import Table, Column, Integer, Float, String, ForeignKey, DateTime, func, MetaData, Boolean
 
 metadata = MetaData()
 
@@ -11,5 +11,6 @@ locations_table = Table(
     Column("city", String, nullable=True),
     Column("country", String, nullable=True),
     Column("location_method", String, nullable=False, default="IP"),
+    Column("map_enabled", Boolean, default=False, nullable=False),
     Column("last_updated", DateTime, default=func.now(), onupdate=func.now())
 )

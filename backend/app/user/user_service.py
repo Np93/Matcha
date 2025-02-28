@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.utils.database import async_session, engine
+from app.utils.database import engine
 # from app.tables.users import users_table
 from bcrypt import hashpw, gensalt, checkpw
 from sqlalchemy.sql import text
@@ -16,8 +16,8 @@ async def verify_password(password: str, hashed_password: str) -> bool:
 async def add_user(email: str, username: str, first_name: str, last_name: str, password_hash: str):
     """Ajoute un utilisateur dans la base de données en SQL."""
     query = text("""
-    INSERT INTO users (email, username, first_name, last_name, password_hash, created_at, status)
-    VALUES (:email, :username, :first_name, :last_name, :password_hash, :created_at, :status);
+    INSERT INTO users (email, username, first_name, last_name, password_hash, created_at, status, laste_connexion)
+    VALUES (:email, :username, :first_name, :last_name, :password_hash, :created_at, :status, :laste_connexion);
     """)
     
     async with engine.begin() as conn:
@@ -28,7 +28,8 @@ async def add_user(email: str, username: str, first_name: str, last_name: str, p
             "last_name": last_name,
             "password_hash": password_hash,
             "created_at": datetime.utcnow(),
-            "status": True
+            "status": True,
+            "laste_connexion": datetime.utcnow()
         })
 
 async def get_user_by_email(email: str):
@@ -76,8 +77,16 @@ async def save_profile_picture(user_id: int, image_bytes: bytes):
         await conn.execute(query, {"user_id": user_id, "image_bytes": image_bytes})
 
 async def update_user_status(user_id: str, status: bool):
-    """Met à jour le statut de l'utilisateur en SQL."""
-    query = text("UPDATE users SET status = :status WHERE id = :user_id;")
+    """Met à jour le statut de l'utilisateur et enregistre la dernière connexion."""
+    query = text("""
+        UPDATE users 
+        SET status = :status, laste_connexion = :laste_connexion 
+        WHERE id = :user_id;
+    """)
 
     async with engine.begin() as conn:
-        await conn.execute(query, {"user_id": user_id, "status": status})
+        await conn.execute(query, {
+            "user_id": user_id,
+            "status": status,
+            "laste_connexion": datetime.utcnow()  # Enregistre l'heure actuelle en UTC
+        })
