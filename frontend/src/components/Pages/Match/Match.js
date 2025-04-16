@@ -5,6 +5,7 @@ import { useAuth } from "../../../context/AuthContext";
 import Filters from "./utils/Filters";
 import SortButtons from "./utils/SortButtons";
 import ProfileCard from "./utils/ProfileCard";
+import LikeButton from "../../../utils/LikeButton"; // Ajout du bouton Like
 
 const Match = () => {
   const [profiles, setProfiles] = useState([]);
@@ -21,7 +22,6 @@ const Match = () => {
   const navigate = useNavigate();
   const { userId } = useAuth();
 
-  // 🟡 Requête initiale
   useEffect(() => {
     const fetchInitialProfiles = async () => {
       try {
@@ -34,7 +34,6 @@ const Match = () => {
     fetchInitialProfiles();
   }, []);
 
-  // 🟠 Requête avec filtres
   const fetchProfilesWithFilters = async () => {
     try {
       const queryParams = new URLSearchParams(filters).toString();
@@ -45,21 +44,12 @@ const Match = () => {
     }
   };
 
-  // 🟢 Gestion des likes
-  const handleLike = async (targetId) => {
-    try {
-      await secureApiCall("/match/like", "POST", { userId, targetId });
-      setProfiles((prev) =>
-        prev.map((profile) =>
-          profile.id === targetId ? { ...profile, liked: true } : profile
-        )
-      );
-    } catch (error) {
-      console.error("Like failed:", error);
-    }
+  const handleLike = (targetId) => {
+    setProfiles((prev) =>
+      prev.map((profile) => (profile.id === targetId ? { ...profile, liked: true } : profile))
+    );
   };
 
-  // 🟡 Gestion des curseurs (sliders)
   const handleRangeChange = (type, value) => {
     setFilters((prev) => ({
       ...prev,
@@ -67,12 +57,9 @@ const Match = () => {
     }));
   };
 
-  // 🟠 Fonction de tri avec priorité (Age > Distance > Tags > Fame)
   const toggleSort = (criteria) => {
     setSortCriteria((prev) =>
-      prev.includes(criteria)
-        ? prev.filter((c) => c !== criteria)
-        : [...prev, criteria]
+      prev.includes(criteria) ? prev.filter((c) => c !== criteria) : [...prev, criteria]
     );
   };
 
@@ -89,7 +76,6 @@ const Match = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 flex gap-6">
-      {/* Filtres Fixes */}
       <Filters
         filters={filters}
         handleRangeChange={handleRangeChange}
@@ -97,12 +83,9 @@ const Match = () => {
         fetchProfilesWithFilters={fetchProfilesWithFilters}
       />
 
-      {/* Section à droite : Boutons de tri + Profils */}
       <div className="flex-1 space-y-4">
-        {/* 🟠 Boutons de tri */}
         <SortButtons toggleSort={toggleSort} sortCriteria={sortCriteria} />
 
-        {/* 🟠 Profils */}
         <main>
           <h2 className="text-lg md:text-2xl font-bold text-center mb-4">Discover Profiles</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -111,8 +94,10 @@ const Match = () => {
                 <ProfileCard
                   key={profile.id}
                   profile={profile}
-                  handleLike={handleLike}
                   navigate={navigate}
+                  extraButtons={
+                    <LikeButton userId={userId} targetId={profile.id} isLiked={profile.liked} onLike={() => handleLike(profile.id)} />
+                  }
                 />
               ))
             ) : (

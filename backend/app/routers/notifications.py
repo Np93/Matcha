@@ -4,6 +4,7 @@ from sqlalchemy.sql import text
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
 from app.utils.database import async_session
 from app.tables.notifications import notifications_table
+from app.profile.block_service import are_users_blocked
 from jose import JWTError
 import json
 
@@ -30,6 +31,12 @@ async def websocket_notifications(websocket: WebSocket):
         await websocket.close(code=1008)
         return
 
+    # Fermer proprement l'ancienne WebSocket si elle existe
+    if user_id in notification_connections:
+        try:
+            await notification_connections[user_id].close()
+        except Exception:
+            pass
     #  Associer le WebSocket à l’utilisateur
     notification_connections[user_id] = websocket
 
@@ -130,6 +137,9 @@ async def mark_notifications_as_read(request: Request, data: dict):
 #  **Fonction pour envoyer une notification**
 async def send_notification(receiver_id, sender_id, notification_type, context):
     """Insère une notification en base et l'envoie via WebSocket si le destinataire est connecté."""
+    if await are_users_blocked(receiver_id, sender_id):
+        return
+
     async with async_session() as session:
         async with session.begin():
             insert_query = text("""

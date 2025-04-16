@@ -6,7 +6,7 @@ DC = docker-compose
 
 # Règle par défaut
 all: ## Construire et démarrer les conteneurs avec sudo
-	sudo $(DC) up --build
+	$(DC) up --build
 	@echo "Containers started with sudo."
 
 # Construire les services Docker

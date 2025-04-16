@@ -1,7 +1,7 @@
 import React from "react";
 import { HeartIcon, UserCircleIcon } from "@heroicons/react/24/solid";
 
-const ProfileCard = ({ profile, handleLike, navigate }) => {
+const ProfileCard = ({ profile, navigate, extraButtons }) => {
   return (
     <div className="bg-gray-800 shadow-lg rounded-lg p-3 border border-gray-700">
       <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-red-500 mx-auto">
@@ -18,16 +18,8 @@ const ProfileCard = ({ profile, handleLike, navigate }) => {
       <p className="text-xs text-gray-400 text-center">Common Tags: {profile.common_tags}</p>
 
       <div className="flex justify-center gap-2 mt-3">
-        <button
-          className={`px-3 py-1 rounded-lg text-xs font-semibold ${
-            profile.liked ? "bg-gray-600 text-gray-400 cursor-not-allowed" : "bg-red-500 text-white hover:bg-red-600"
-          }`}
-          onClick={() => handleLike(profile.id)}
-          disabled={profile.liked}
-        >
-          <HeartIcon className="w-4 h-4 inline-block mr-1" />
-          Like
-        </button>
+        {extraButtons}
+
         <button
           className="px-3 py-1 rounded-lg text-xs font-semibold bg-gray-700 text-white hover:bg-gray-600"
           onClick={() => navigate(`/profile/${profile.username}`, { state: { userId: profile.id } })}

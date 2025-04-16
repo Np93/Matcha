@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSo
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
 from sqlalchemy.sql import text
+from app.profile.block_service import are_users_blocked
 from app.routers.notifications import send_notification
 from app.utils.database import async_session
 from jose import JWTError, jwt
@@ -39,18 +40,18 @@ async def get_user_conversations(request: Request):
             result = await session.execute(query, {"user_id": user_id})
             conversations = result.fetchall()
 
-    # Formate les données pour le front-end
-    formatted_conversations = [
-        {
-            "id": row.conversation_id,
-            "name": row.other_username,
-            "avatar": row.profile_picture if row.profile_picture else None,
-            "isOnline": row.is_online,  # Cette donnée peut être mise à jour avec un système de présence en ligne
-        }
-        for row in conversations
-    ]
-
-    return formatted_conversations
+    filtered_conversations = []
+    for row in conversations:
+        other_id = row.other_user_id
+        if not await are_users_blocked(user_id, other_id):
+            filtered_conversations.append({
+                "id": row.conversation_id,
+                "name": row.other_username,
+                "avatar": row.profile_picture if row.profile_picture else None,
+                "isOnline": row.is_online,
+            })
+            
+    return filtered_conversations
 
 #  API pour récupérer les messages d'une conversation
 @router.get("/messages/{conversation_id}")

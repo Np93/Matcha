@@ -4,6 +4,7 @@ from app.utils.database import async_session, engine
 from app.chat.chat_service import create_conversation
 from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles
 from app.user.user_service import get_user_by_id
+from app.profile.block_service import are_users_blocked, async_generator_filter
 from app.profile.location_service import haversine, get_user_location
 from app.routers.notifications import send_notification
 from app.profile.profile_service import get_profile_by_user_id
@@ -44,10 +45,20 @@ async def get_profiles(request: Request):
             user_lat, user_lon, user_interests, liked_user_ids, profiles
         )
 
-    # Trier les profils selon distance > tags > fame rating
-    sorted_profiles = await sort_profiles(profiles_with_details)
+    async def is_not_blocked(profile):
+        return not await are_users_blocked(user_id, profile["id"])
 
+    not_blocked_profiles = [
+        profile async for profile in async_generator_filter(profiles_with_details, is_not_blocked)
+    ]
+
+    # Trier les profils selon distance > tags > fame rating
+    sorted_profiles = await sort_profiles(not_blocked_profiles)
     return sorted_profiles
+    # Trier les profils selon distance > tags > fame rating
+    # sorted_profiles = await sort_profiles(profiles_with_details)
+
+    # return sorted_profiles
 
 @router.get("/filter_profiles")
 async def filter_profiles(request: Request):
@@ -105,7 +116,14 @@ async def filter_profiles(request: Request):
             )
         ]
 
-    return filtered_profiles
+    async def is_not_blocked(profile):
+        return not await are_users_blocked(user_id, profile["id"])
+
+    not_blocked_profiles = [
+        profile async for profile in async_generator_filter(filtered_profiles, is_not_blocked)
+    ]
+    return not_blocked_profiles
+    # return filtered_profiles
 
 @router.post("/like")
 async def like_profile(request: Request, data: dict):
@@ -117,6 +135,9 @@ async def like_profile(request: Request, data: dict):
 
     if liker_id == liked_id:
         raise HTTPException(status_code=400, detail="You cannot like yourself")
+
+    if await are_users_blocked(liker_id, liked_id):
+        return {"matched": False}
 
     # Vérifie si l'utilisateur a déjà liké
     if await check_same_like(liker_id, liked_id):

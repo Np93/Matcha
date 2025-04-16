@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
-from app.utils.database import async_session
+from datetime import datetime
+from app.utils.database import engine
 from app.tables.locations import locations_table
 import math
 
@@ -8,50 +9,51 @@ async def upsert_location(user_id: int, latitude: float, longitude: float, city:
     """Met à jour ou insère la localisation d'un utilisateur avec mapEnabled."""
     if mapEnabled is None:
         mapEnabled = False
-    async with async_session() as session:
-        async with session.begin():
-            # Vérifier si l'utilisateur a déjà une localisation
-            check_query = text("SELECT id FROM locations WHERE user_id = :user_id")
-            result = await session.execute(check_query, {"user_id": user_id})
-            existing_location = result.fetchone()
+    async with engine.begin() as conn:
+        # Vérifier si l'utilisateur a déjà une localisation
+        check_query = text("SELECT id FROM locations WHERE user_id = :user_id")
+        result = await conn.execute(check_query, {"user_id": user_id})
+        existing_location = result.fetchone()
 
-            if existing_location:
-                # Mise à jour de la localisation existante
-                update_query = text("""
-                    UPDATE locations
-                    SET latitude = :latitude, 
-                        longitude = :longitude, 
-                        city = :city, 
-                        country = :country, 
-                        location_method = :location_method, 
-                        map_enabled = :mapEnabled,
-                        last_updated = NOW()
-                    WHERE user_id = :user_id
-                """)
-                await session.execute(update_query, {
-                    "user_id": user_id,
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "city": city,
-                    "country": country,
-                    "location_method": location_method,
-                    "mapEnabled": mapEnabled,
-                })
-            else:
-                # Insertion d'une nouvelle localisation
-                insert_query = text("""
-                    INSERT INTO locations (user_id, latitude, longitude, city, country, location_method, map_enabled, last_updated)
-                    VALUES (:user_id, :latitude, :longitude, :city, :country, :location_method, :mapEnabled, NOW())
-                """)
-                await session.execute(insert_query, {
-                    "user_id": user_id,
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "city": city,
-                    "country": country,
-                    "location_method": location_method,
-                    "mapEnabled": mapEnabled,
-                })
+        if existing_location:
+            # Mise à jour de la localisation existante
+            update_query = text("""
+                UPDATE locations
+                SET latitude = :latitude, 
+                    longitude = :longitude, 
+                    city = :city, 
+                    country = :country, 
+                    location_method = :location_method, 
+                    map_enabled = :mapEnabled,
+                    last_updated = :last_updated
+                WHERE user_id = :user_id
+            """)
+            await conn.execute(update_query, {
+                "user_id": user_id,
+                "latitude": latitude,
+                "longitude": longitude,
+                "city": city,
+                "country": country,
+                "location_method": location_method,
+                "mapEnabled": mapEnabled,
+                "last_updated": datetime.utcnow(),
+            })
+        else:
+            # Insertion d'une nouvelle localisation
+            insert_query = text("""
+                INSERT INTO locations (user_id, latitude, longitude, city, country, location_method, map_enabled, last_updated)
+                VALUES (:user_id, :latitude, :longitude, :city, :country, :location_method, :mapEnabled, :last_updated)
+            """)
+            await conn.execute(insert_query, {
+                "user_id": user_id,
+                "latitude": latitude,
+                "longitude": longitude,
+                "city": city,
+                "country": country,
+                "location_method": location_method,
+                "mapEnabled": mapEnabled,
+                "last_updated": datetime.utcnow(),
+            })
 
 def haversine(lat1, lon1, lat2, lon2):
     """Calcule la distance en kilomètres entre deux points GPS."""
@@ -79,3 +81,28 @@ async def get_user_location(conn, user_id):
     if not location:
         raise Exception("Localisation non trouvée pour cet utilisateur.")
     return location
+
+async def update_location(conn, user_id: int, latitude: float, longitude: float, city: str, country: str, location_method: str, map_enabled: bool):
+    """Met à jour la localisation d'un utilisateur dans la base de données."""
+    query = text("""
+        UPDATE locations 
+        SET latitude = :latitude, 
+            longitude = :longitude, 
+            city = :city, 
+            country = :country, 
+            location_method = :location_method, 
+            map_enabled = :map_enabled, 
+            last_updated = :last_updated
+        WHERE user_id = :user_id;
+    """)
+    
+    await conn.execute(query, {
+        "latitude": latitude,
+        "longitude": longitude,
+        "city": city,
+        "country": country,
+        "location_method": location_method,
+        "map_enabled": map_enabled,
+        "last_updated": datetime.utcnow(),
+        "user_id": user_id
+    })
