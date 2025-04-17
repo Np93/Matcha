@@ -16,37 +16,66 @@ const Navbar = () => {
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const socket = useRef(null);
+  const connectedUserId = useRef(null);
   const navigate = useNavigate();
 
   //  Connexion WebSocket pour écouter les nouvelles notifications
   useEffect(() => {
-    if (!isLoggedIn) return;
-    
-    console.log("Tentative de connexion WebSocket...");
-    
-    socket.current = new WebSocket(`ws://localhost:8000/notifications/ws/notifications`);
-    
-    socket.current.onopen = () => {
-      console.log("✅ WebSocket connecté avec succès !");
+    if (!isLoggedIn || !userId) return;
+  
+    const isSocketOpen = socket.current && socket.current.readyState === WebSocket.OPEN;
+  
+    // Si la socket est déjà connectée pour ce user et toujours ouverte, on ne fait rien
+    if (isSocketOpen && connectedUserId.current === userId) {
+      console.log("⚠️ WebSocket déjà connectée pour cet utilisateur");
+      return;
+    }
+  
+    console.log("🧠 Ouverture d'une nouvelle WebSocket pour user:", userId);
+  
+    // Si une ancienne socket existe, on la ferme proprement
+    if (socket.current) {
+      console.log("🔌 Fermeture de l'ancienne socket...");
+      socket.current.close();
+      socket.current = null;
+      connectedUserId.current = null;
+    }
+  
+    // Création d'une nouvelle socket
+    const newSocket = new WebSocket(`ws://localhost:8000/notifications/ws/notifications`);
+    socket.current = newSocket;
+    connectedUserId.current = userId;
+  
+    newSocket.onopen = () => {
+      console.log("✅ WebSocket connectée !");
     };
-
-    socket.current.onmessage = (event) => {
-      // console.log("📩 Notification reçue :", event.data);
-      setUnreadCount((prev) => prev + 1); // Incrémente le nombre de notifications non lues
+  
+    newSocket.onmessage = (event) => {
+      console.log("📩 Notification reçue :", event.data);
+      setUnreadCount((prev) => prev + 1);
     };
-
-    socket.current.onerror = (error) => {
+  
+    newSocket.onerror = (error) => {
       console.error("❌ Erreur WebSocket :", error);
     };
   
-    socket.current.onclose = (event) => {
+    newSocket.onclose = (event) => {
       console.warn("⚠️ WebSocket fermée :", event.reason);
+      if (socket.current === newSocket) {
+        connectedUserId.current = null;
+        socket.current = null;
+      }
     };
-
+  
     return () => {
-      console.log("🔌 Fermeture de la WebSocket..."); 
-      socket.current?.close()}; // Ferme la connexion WebSocket quand le composant est démonté
-  }, [isLoggedIn]);
+      console.log("🧹 Cleanup socket...");
+      if (socket.current === newSocket) {
+        newSocket.close();
+        socket.current = null;
+        connectedUserId.current = null;
+      }
+    };
+  }, [isLoggedIn, userId]);
 
   //  Récupération des notifications non lues lors du chargement
   useEffect(() => {

@@ -189,7 +189,8 @@ const Chat = () => {
             onClick={() => setSelectedChat(chat)}
           >
             <img
-              src={chat.avatar || "https://via.placeholder.com/50"}
+            // a remplacer l'image par defaut
+              src={chat.avatar || "/images/avatar-default.png"}
               alt={chat.name}
               className="w-12 h-12 rounded-full"
             />

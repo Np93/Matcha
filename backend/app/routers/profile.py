@@ -1,6 +1,6 @@
 from app.utils.jwt_handler import verify_user_from_token
 from fastapi import APIRouter, HTTPException, Request, Response
-from app.profile.profile_service import get_profile_by_user_id
+from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
 from app.user.user_service import get_user_by_id
 from app.routers.notifications import send_notification
 from app.match.match_service import get_liked_user_ids
@@ -62,6 +62,8 @@ async def get_profile(request: Request):
 async def get_user_profile(user_id: int, request: Request):
     """Récupère le profil d'un utilisateur et vérifie s'il a déjà été liké."""
     user_requesting = await verify_user_from_token(request)
+
+    await increment_fame_rating(user_id)
 
     async with engine.begin() as conn:
         profile_data = await get_profile_by_user_id(user_id)

@@ -2,9 +2,6 @@ import json
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
-# from sqlalchemy.dialects.postgresql import insert
-from datetime import datetime
-# from app.tables.profile import profiles_table
 from app.utils.database import engine
 from fastapi import HTTPException
 
@@ -17,8 +14,8 @@ async def upsert_profile(user_id: int, gender: str, sexual_preferences: str, bio
     interests_json = json.dumps(interests)  # Convertit la liste en JSON
 
     query = text("""
-    INSERT INTO profiles (user_id, gender, sexual_preferences, biography, interests, birthday)
-    VALUES (:user_id, :gender, :sexual_preferences, :biography, :interests, :birthday)
+    INSERT INTO profiles (user_id, gender, sexual_preferences, biography, interests, birthday, fame_rating)
+    VALUES (:user_id, :gender, :sexual_preferences, :biography, :interests, :birthday, 0)
     ON CONFLICT (user_id)
     DO UPDATE SET 
         gender = EXCLUDED.gender,
@@ -62,5 +59,24 @@ async def get_profile_by_user_id(id: int):
         "sexual_preferences": profile_dict["sexual_preferences"],
         "biography": profile_dict["biography"],
         "interests": profile_dict["interests"],  # Peut être en JSON
-        "birthday": profile_dict["birthday"].strftime("%Y-%m-%d") if profile_dict["birthday"] else None
+        "birthday": profile_dict["birthday"].strftime("%Y-%m-%d") if profile_dict["birthday"] else None,
+        "fame_rating": profile_dict["fame_rating"]
     }
+
+async def increment_fame_rating(user_id: int, amount: int = 1):
+    """Incrémente le fame_rating d'un utilisateur, sans dépasser 50."""
+    async with engine.begin() as conn:
+        query = text("""
+            UPDATE profiles
+            SET fame_rating = LEAST(50, fame_rating + :amount)
+            WHERE user_id = :user_id;
+        """)
+        await conn.execute(query, {
+            "user_id": user_id,
+            "amount": amount
+        })
+
+async def reset_fame_ratings():
+    async with engine.begin() as conn:
+        query = text("UPDATE profiles SET fame_rating = 0")
+        await conn.execute(query)

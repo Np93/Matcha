@@ -11,5 +11,6 @@ profiles_table = Table(
     Column("biography", String, nullable=True),
     Column("interests", String, nullable=True),  # Stockez les tags sous forme de chaîne JSON
     Column("birthday", Date, nullable=True),
+    Column("fame_rating", Integer, nullable=False, default=0),
     # Column("profile_pictures", String, nullable=True),  # Stockez les chemins des images
 )

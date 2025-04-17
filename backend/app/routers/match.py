@@ -7,7 +7,7 @@ from app.user.user_service import get_user_by_id
 from app.profile.block_service import are_users_blocked, async_generator_filter
 from app.profile.location_service import haversine, get_user_location
 from app.routers.notifications import send_notification
-from app.profile.profile_service import get_profile_by_user_id
+from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
 from sqlalchemy.sql import text
 import json
 
@@ -146,6 +146,8 @@ async def like_profile(request: Request, data: dict):
     # Insère le like
     await insert_like(liker_id, liked_id)
 
+    await increment_fame_rating(liked_id, amount=3)
+
     # Vérifie si c'est un match
     if await check_match(liker_id, liked_id):
         # Crée la conversation
@@ -164,6 +166,8 @@ async def like_profile(request: Request, data: dict):
             notification_type="match",
             context=f"Vous avez matché avec {user['username']} ! 🎉"
         )
+        await increment_fame_rating(liker_id, amount=7)
+        await increment_fame_rating(liked_id, amount=7)
         return {"matched": True}
 
     return {"matched": False}

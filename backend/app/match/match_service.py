@@ -62,7 +62,7 @@ async def get_matching_profiles(conn, user_id, gender, preferences):
     orientation_filter = get_orientation_filter(gender, preferences)
     query = text(f"""
         SELECT users.id, users.username, profiles.gender, profiles.sexual_preferences,
-               profiles.birthday, profiles.interests, 
+               profiles.birthday, profiles.interests, profiles.fame_rating, 
                locations.latitude, locations.longitude
         FROM users
         JOIN profiles ON users.id = profiles.user_id
@@ -108,7 +108,7 @@ async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, pr
 
         age = calculate_age(profile["birthday"]) if profile["birthday"] else None
         common_tags = count_common_tags(user_interests, profile["interests"])
-        # fame_rating = profile.get("fame_rating", 0)  # Si non défini, valeur par défaut 0
+        fame_rating = profile.get("fame_rating", 0)  # Si non défini, valeur par défaut 0
 
         profiles_with_details.append({
             "id": profile["id"],
@@ -116,8 +116,8 @@ async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, pr
             "distance_km": distance_km,
             "liked": profile["id"] in liked_user_ids,
             "age": age,
-            "common_tags": common_tags
-            # "fame_rating": fame_rating  # Ajout du fame_rating pour le tri
+            "common_tags": common_tags,
+            "fame_rating": fame_rating  # Ajout du fame_rating pour le tri
         })
     return profiles_with_details
 
@@ -128,4 +128,4 @@ async def sort_profiles(profiles: list[dict]) -> list[dict]:
     2. Nombre de tags communs (décroissant)
     3. Fame rating (décroissant)
     """
-    return sorted(profiles, key=lambda p: (p["distance_km"], -p["common_tags"]))#, -p["fame_rating"]))
+    return sorted(profiles, key=lambda p: (p["distance_km"], -p["common_tags"], -p["fame_rating"]))

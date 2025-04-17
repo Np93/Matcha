@@ -3,6 +3,7 @@ from app.routers import auth, profile, log, profiles_complete, chat, match, noti
 from app.config import settings
 from app.utils.database import create_tables
 from fastapi.middleware.cors import CORSMiddleware
+from app.utils.scheduler import start_scheduler
 import sys
 import os
 
@@ -11,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Créer l'application FastAPI
 app = FastAPI()
+
+start_scheduler()
 
 @app.on_event("startup")
 async def startup_event():

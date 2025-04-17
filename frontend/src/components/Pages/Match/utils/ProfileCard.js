@@ -1,5 +1,6 @@
 import React from "react";
 import { HeartIcon, UserCircleIcon } from "@heroicons/react/24/solid";
+import FameRatingStars from "../../../../utils/FameRatingStars";
 
 const ProfileCard = ({ profile, navigate, extraButtons }) => {
   return (
@@ -14,7 +15,10 @@ const ProfileCard = ({ profile, navigate, extraButtons }) => {
       <h3 className="text-base font-semibold mt-2 text-center">{profile.username}</h3>
       <p className="text-xs text-gray-400 text-center">Age: {profile.age}</p>
       <p className="text-xs text-gray-400 text-center">Distance: {profile.distance_km} km</p>
-      <p className="text-xs text-gray-400 text-center">Fame: {profile.fame_rating}</p>
+      <div className="mt-1">
+        <FameRatingStars fame_rating={profile.fame_rating} />
+      </div>
+      {/* <p className="text-xs text-gray-400 text-center">Fame: {profile.fame_rating}</p> */}
       <p className="text-xs text-gray-400 text-center">Common Tags: {profile.common_tags}</p>
 
       <div className="flex justify-center gap-2 mt-3">
