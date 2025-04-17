@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../../../../utils/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/AuthContext";
+import FameRatingStars from "../../../../utils/FameRatingStars";
 import {
   UserCircleIcon,
   CalendarDaysIcon,
@@ -45,7 +46,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6">
       {/* Photo de profil */}
-      <div className="flex justify-center mb-8">
+      <div className="flex flex-col items-center mb-8">
         {profileData.profile_pictures ? (
           <div className="w-32 h-32 rounded-full overflow-hidden shadow-lg">
             <img
@@ -57,6 +58,11 @@ const Profile = () => {
         ) : (
           defaultIcon
         )}
+
+        {/* Fame Rating centré */}
+        <div className="mt-4">
+          <FameRatingStars fame_rating={profileData.fame_rating || 0} />
+        </div>
       </div>
 
       {/* Informations du profil */}
