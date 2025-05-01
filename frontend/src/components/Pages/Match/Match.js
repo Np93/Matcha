@@ -21,12 +21,14 @@ const Match = () => {
   const [sortCriteria, setSortCriteria] = useState([]);
   const navigate = useNavigate();
   const { userId } = useAuth();
+  const [canLike, setCanLike] = useState(true);
 
   useEffect(() => {
     const fetchInitialProfiles = async () => {
       try {
         const response = await secureApiCall("/match/profiles", "GET");
-        setProfiles(response);
+        setCanLike(response.can_like);
+        setProfiles(response.profiles);
       } catch (error) {
         console.error("Failed to fetch initial profiles:", error);
       }
@@ -38,7 +40,8 @@ const Match = () => {
     try {
       const queryParams = new URLSearchParams(filters).toString();
       const response = await secureApiCall(`/match/filter_profiles?${queryParams}`, "GET");
-      setProfiles(response);
+      setCanLike(response.can_like);
+      setProfiles(response.profiles);
     } catch (error) {
       console.error("Failed to fetch filtered profiles:", error);
     }
@@ -96,7 +99,7 @@ const Match = () => {
                   profile={profile}
                   navigate={navigate}
                   extraButtons={
-                    <LikeButton userId={userId} targetId={profile.id} isLiked={profile.liked} onLike={() => handleLike(profile.id)} />
+                    <LikeButton userId={userId} targetId={profile.id} isLiked={profile.liked} onLike={() => handleLike(profile.id)} disabled={!canLike} />
                   }
                 />
               ))

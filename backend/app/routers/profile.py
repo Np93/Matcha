@@ -6,6 +6,7 @@ from app.routers.notifications import send_notification
 from app.match.match_service import get_liked_user_ids
 from app.profile.block_service import block_user, is_user_blocked
 from app.profile.picture_service import get_pictures_of_user
+from app.profile.picture_service import get_main_picture_of_user
 from app.utils.database import engine
 import logging
 import re
@@ -82,6 +83,8 @@ async def get_user_profile(user_id: int, request: Request):
 
         profile_pictures = await get_pictures_of_user(user_id)
 
+        has_main_picture = bool(await get_main_picture_of_user(user_requesting["id"]))
+
         await send_notification(
             receiver_id=user_id,
             sender_id=user_requesting["id"],
@@ -98,6 +101,7 @@ async def get_user_profile(user_id: int, request: Request):
             "laste_connexion": user["laste_connexion"],
             "liked": is_liked,
             **profile_data,
+            "can_like": has_main_picture,
             "profile_pictures": profile_pictures
         }
 

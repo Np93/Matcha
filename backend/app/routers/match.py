@@ -59,7 +59,11 @@ async def get_profiles(request: Request):
     for profile in sorted_profiles:
         profile["main_picture"] = await get_main_picture_of_user(profile["id"])
 
-    return sorted_profiles
+    has_main_picture = bool(await get_main_picture_of_user(user_id))
+    return {
+        "can_like": has_main_picture,
+        "profiles": sorted_profiles
+    }
     # Trier les profils selon distance > tags > fame rating
     # sorted_profiles = await sort_profiles(profiles_with_details)
 
@@ -131,7 +135,11 @@ async def filter_profiles(request: Request):
     for profile in not_blocked_profiles:
         profile["main_picture"] = await get_main_picture_of_user(profile["id"])
 
-    return not_blocked_profiles
+    has_main_picture = bool(await get_main_picture_of_user(user_id))
+    return {
+        "can_like": has_main_picture,
+        "profiles": not_blocked_profiles
+    }
     # return filtered_profiles
 
 @router.post("/like")
@@ -147,6 +155,11 @@ async def like_profile(request: Request, data: dict):
 
     if await are_users_blocked(liker_id, liked_id):
         return {"matched": False}
+
+    # Vérifie que le liker a une photo
+    main_pic = await get_main_picture_of_user(liker_id)
+    if not main_pic:
+        raise HTTPException(status_code=403, detail="You must upload a profile picture before liking others.")
 
     # Vérifie si l'utilisateur a déjà liké
     if await check_same_like(liker_id, liked_id):

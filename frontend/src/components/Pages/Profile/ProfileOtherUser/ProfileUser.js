@@ -19,6 +19,7 @@ const ProfileUser = () => {
   const profileId = location.state?.userId;
   const { userId } = useAuth();
   const [profileData, setProfileData] = useState(null);
+  const [canLike, setCanLike] = useState(true);
 
   useEffect(() => {
     if (!profileId) return;
@@ -27,6 +28,7 @@ const ProfileUser = () => {
       try {
         const response = await secureApiCall(`/profile/user/${profileId}`);
         setProfileData(response);
+        setCanLike(response.can_like);
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
       }
@@ -112,6 +114,7 @@ const ProfileUser = () => {
           userId={userId}
           targetId={profileId}
           isLiked={profileData.liked}
+          disabled={!canLike}
           onLike={() => setProfileData({ ...profileData, liked: true })}
         />
         <button
