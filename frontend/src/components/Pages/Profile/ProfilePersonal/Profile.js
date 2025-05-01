@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../../../../utils/api";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/AuthContext";
-import FameRatingStars from "../../../../utils/FameRatingStars";
+import ProfilePictureDisplay from "../../../../utils/ProfilePictureDisplay";
 import {
   UserCircleIcon,
   CalendarDaysIcon,
@@ -10,7 +10,8 @@ import {
   IdentificationIcon,
   HeartIcon,
   SparklesIcon,
-} from "@heroicons/react/24/outline"; // https://heroicons.com/
+} from "@heroicons/react/24/outline";
+
 
 const Profile = () => {
   const [profileData, setProfileData] = useState(null);
@@ -38,7 +39,7 @@ const Profile = () => {
   }
 
   const defaultIcon = (
-    <div className="w-24 h-24 flex items-center justify-center bg-gray-700 text-white rounded-full">
+    <div className="w-32 h-32 flex items-center justify-center bg-gray-700 text-white rounded-full">
       <UserCircleIcon className="w-12 h-12" />
     </div>
   );
@@ -46,60 +47,36 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6">
       {/* Photo de profil */}
-      <div className="flex flex-col items-center mb-8">
-        {profileData.profile_pictures ? (
-          <div className="w-32 h-32 rounded-full overflow-hidden shadow-lg">
-            <img
-              src={JSON.parse(profileData.profile_pictures)[0]}
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : (
-          defaultIcon
-        )}
-
-        {/* Fame Rating centré */}
-        <div className="mt-4">
-          <FameRatingStars fame_rating={profileData.fame_rating || 0} />
-        </div>
-      </div>
+      <ProfilePictureDisplay
+        pictures={profileData.profile_pictures}
+        fameRating={profileData.fame_rating}
+      />
 
       {/* Informations du profil */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Champs du profil */}
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <IdentificationIcon className="w-6 h-6 text-red-500" />
-          <p>
-            <strong>Username:</strong> {profileData.username || "N/A"}
-          </p>
+          <p><strong>Username:</strong> {profileData.username || "N/A"}</p>
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <GlobeAltIcon className="w-6 h-6 text-red-500" />
-          <p>
-            <strong>Gender:</strong> {profileData.gender || "N/A"}
-          </p>
+          <p><strong>Gender:</strong> {profileData.gender || "N/A"}</p>
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <CalendarDaysIcon className="w-6 h-6 text-red-500" />
-          <p>
-            <strong>Birthday:</strong> {profileData.birthday || "N/A"}
-          </p>
+          <p><strong>Birthday:</strong> {profileData.birthday || "N/A"}</p>
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <HeartIcon className="w-6 h-6 text-red-500" />
-          <p>
-            <strong>Sexual Preferences:</strong>{" "}
-            {profileData.sexual_preferences || "N/A"}
-          </p>
+          <p><strong>Sexual Preferences:</strong> {profileData.sexual_preferences || "N/A"}</p>
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <UserCircleIcon className="w-6 h-6 text-red-500" />
-          <p>
-            <strong>Biography:</strong> {profileData.biography || "N/A"}
-          </p>
+          <p><strong>Biography:</strong> {profileData.biography || "N/A"}</p>
         </div>
-        {/* Interests - Stylisation avec # et présentation sous forme de tags */}
+
+        {/* Interests */}
         <div className="bg-transparent border border-gray-700 shadow-lg rounded-md p-4 col-span-1 sm:col-span-2">
           <div className="flex items-center gap-4 mb-2">
             <SparklesIcon className="w-6 h-6 text-red-500" />
@@ -108,10 +85,7 @@ const Profile = () => {
           <div className="flex flex-wrap gap-2">
             {profileData.interests ? (
               JSON.parse(profileData.interests).map((interest, index) => (
-                <span
-                  key={index}
-                  className="bg-gray-700 text-white px-3 py-1 text-sm rounded-md"
-                >
+                <span key={index} className="bg-gray-700 text-white px-3 py-1 text-sm rounded-md">
                   #{interest}
                 </span>
               ))

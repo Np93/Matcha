@@ -8,6 +8,7 @@ from app.profile.block_service import are_users_blocked, async_generator_filter
 from app.profile.location_service import haversine, get_user_location
 from app.routers.notifications import send_notification
 from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
+from app.profile.picture_service import get_main_picture_of_user
 from sqlalchemy.sql import text
 import json
 
@@ -54,6 +55,10 @@ async def get_profiles(request: Request):
 
     # Trier les profils selon distance > tags > fame rating
     sorted_profiles = await sort_profiles(not_blocked_profiles)
+
+    for profile in sorted_profiles:
+        profile["main_picture"] = await get_main_picture_of_user(profile["id"])
+
     return sorted_profiles
     # Trier les profils selon distance > tags > fame rating
     # sorted_profiles = await sort_profiles(profiles_with_details)
@@ -122,6 +127,10 @@ async def filter_profiles(request: Request):
     not_blocked_profiles = [
         profile async for profile in async_generator_filter(filtered_profiles, is_not_blocked)
     ]
+    # ajout des images de profile
+    for profile in not_blocked_profiles:
+        profile["main_picture"] = await get_main_picture_of_user(profile["id"])
+
     return not_blocked_profiles
     # return filtered_profiles
 

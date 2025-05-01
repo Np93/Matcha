@@ -1,149 +1,81 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
-from sqlalchemy.sql import text
 from app.profile.block_service import are_users_blocked
 from app.routers.notifications import send_notification
-from app.utils.database import async_session
+from app.chat.chat_service import get_user_conversations_from_db, get_messages_from_conversation, get_conversation_users, insert_message
 from jose import JWTError, jwt
-import json
+import json, base64
 
 router = APIRouter()
 
 #  Stockage des connexions WebSocket actives
 active_connections = {}
-
-# recupere tout les conversation disponible
 @router.get("/conversations")
 async def get_user_conversations(request: Request):
-    # Vérifie le token et récupère l'ID utilisateur
-    print("je suis dans conversation")
     user = await verify_user_from_token(request)
     user_id = user["id"]
 
-    async with async_session() as session:
-        async with session.begin():
-            # Requête SQL pour récupérer toutes les conversations d'un utilisateur
-            query = text("""
-                SELECT c.id AS conversation_id, 
-                       u.id AS other_user_id, 
-                       u.username AS other_username, 
-                       pp.image_data AS profile_picture,
-                       u.status AS is_online  -- Récupération du statut de connexion
-                FROM conversations c
-                JOIN users u ON 
-                    (c.user1_id = :user_id AND c.user2_id = u.id) OR
-                    (c.user2_id = :user_id AND c.user1_id = u.id)
-                LEFT JOIN profile_pictures pp ON u.id = pp.user_id AND pp.is_profile_picture = TRUE
-                ORDER BY c.created_at DESC
-            """)
-            result = await session.execute(query, {"user_id": user_id})
-            conversations = result.fetchall()
+    raw_conversations = await get_user_conversations_from_db(user_id)
 
-    filtered_conversations = []
-    for row in conversations:
+    filtered = []
+    for row in raw_conversations:
         other_id = row.other_user_id
         if not await are_users_blocked(user_id, other_id):
-            filtered_conversations.append({
+            avatar = (
+                f"data:image/jpeg;base64,{base64.b64encode(row.profile_picture).decode('utf-8')}"
+                if row.profile_picture else None
+            )
+            filtered.append({
                 "id": row.conversation_id,
                 "name": row.other_username,
-                "avatar": row.profile_picture if row.profile_picture else None,
+                "avatar": avatar,
                 "isOnline": row.is_online,
             })
-            
-    return filtered_conversations
+    return filtered
 
-#  API pour récupérer les messages d'une conversation
 @router.get("/messages/{conversation_id}")
 async def get_messages(conversation_id: int, request: Request):
-    """Récupère les messages stockés dans la base de données"""
-    user = await verify_user_from_token(request)
-    
-    async with async_session() as session:
-        async with session.begin():
-            query = text("""
-                SELECT id, sender_id, content, timestamp 
-                FROM messages 
-                WHERE conversation_id = :conversation_id 
-                ORDER BY timestamp ASC
-            """)
-            result = await session.execute(query, {"conversation_id": conversation_id})
-            messages = [{"id": row.id, "sender_id": row.sender_id, "content": row.content, "timestamp": str(row.timestamp)} for row in result.fetchall()]
-    
-    return messages
+    await verify_user_from_token(request)
+    rows = await get_messages_from_conversation(conversation_id)
+    return [
+        {
+            "id": row.id,
+            "sender_id": row.sender_id,
+            "content": row.content,
+            "timestamp": str(row.timestamp)
+        }
+        for row in rows
+    ]
 
 @router.post("/send")
 async def send_message(request: Request, data: dict):
-    """Stocke le message dans la DB et l’envoie via WebSocket si le destinataire est connecté.
-       Si le destinataire est hors ligne, une notification lui est envoyée.
-    """
-    # Vérifier l'utilisateur à partir du token
     user = await verify_user_from_token(request)
     sender_id = user["id"]
     conversation_id = data["chat_id"]
     content = data["content"]
 
-    # Récupérer l'autre utilisateur de la conversation
-    async with async_session() as session:
-        async with session.begin():
-            query = text("""
-                SELECT user1_id, user2_id FROM conversations WHERE id = :conversation_id
-            """)
-            result = await session.execute(query, {"conversation_id": conversation_id})
-            conversation = result.fetchone()
-            
-            if not conversation:
-                raise HTTPException(status_code=404, detail="Conversation introuvable")
+    convo = await get_conversation_users(conversation_id)
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation introuvable")
 
-            # Déterminer qui est le destinataire
-            receiver_id = conversation.user1_id if conversation.user2_id == sender_id else conversation.user2_id
+    receiver_id = convo.user1_id if convo.user2_id == sender_id else convo.user2_id
 
-    # Stocker le message en base de données
-    async with async_session() as session:
-        async with session.begin():
-            insert_query = text("""
-                INSERT INTO messages (conversation_id, sender_id, content, timestamp, is_read) 
-                VALUES (:conversation_id, :sender_id, :content, NOW(), FALSE)
-                RETURNING id, timestamp
-            """)
-            result = await session.execute(insert_query, {
-                "conversation_id": conversation_id,
+    message_id, timestamp = await insert_message(conversation_id, sender_id, content)
+
+    for user_socket in active_connections.get(conversation_id, []):
+        user_socket_id, ws = user_socket
+        if user_socket_id in {sender_id, receiver_id}:
+            await ws.send_text(json.dumps({
+                "id": message_id,
                 "sender_id": sender_id,
-                "content": content
-            })
-            message_id, timestamp = result.fetchone()
+                "content": content,
+                "timestamp": str(timestamp)
+            }))
 
-    # Envoyer le message à l'expéditeur (assurer qu'il voit son propre message)
-    if conversation_id in active_connections:
-        for user_socket in active_connections[conversation_id]:
-            user_socket_id, ws = user_socket
-            if user_socket_id == sender_id:  # Assurer que l'expéditeur reçoit son message
-                await ws.send_text(json.dumps({
-                    "id": message_id,
-                    "sender_id": sender_id,
-                    "content": content,
-                    "timestamp": str(timestamp),
-                }))
-
-    # Vérifier si le destinataire est connecté et lui envoyer le message en direct
-    recipient_connected = False
-    if conversation_id in active_connections:
-        for user_socket in active_connections[conversation_id]:
-            other_user_id, ws = user_socket
-            if other_user_id == receiver_id:  # Envoyer uniquement au destinataire
-                recipient_connected = True
-                await ws.send_text(json.dumps({
-                    "id": message_id,
-                    "sender_id": sender_id,
-                    "content": content,
-                    "timestamp": str(timestamp),
-                }))
-
-    # Si le destinataire est **hors ligne**, enregistrer une notification
-    if not recipient_connected:
+    if not any(user_socket_id == receiver_id for user_socket_id, _ in active_connections.get(conversation_id, [])):
         await send_notification(
-            receiver_id=receiver_id,  # Le destinataire reçoit la notification
-            sender_id=sender_id,  # L'expéditeur du message
+            receiver_id=receiver_id,
+            sender_id=sender_id,
             notification_type="message",
             context=f"{user['username']} vous a envoyé un message."
         )

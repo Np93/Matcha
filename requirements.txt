@@ -8,3 +8,5 @@ pydantic-settings
 python-jose
 websockets
 apscheduler
+python-multipart
+Pillow

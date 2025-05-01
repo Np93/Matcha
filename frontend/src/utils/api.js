@@ -24,12 +24,27 @@ export const apiCall = async (url, method, body) => {
 // Configurer Axios pour inclure les cookies dans toutes les requêtes
 axios.defaults.withCredentials = true;
 
+const buildHeaders = () => {
+  const hdrs = {};
+  if (!(body instanceof FormData)) {
+    hdrs["Content-Type"] = "application/json";
+  }
+  if (userId) {
+    hdrs["X-User-ID"] = userId;
+  }
+  return hdrs;
+};
+
 // Requête sécurisée pour les données protégées
 export const secureApiCall = async (url, method = "GET", body = null, userId = null) => {
   try {
-    const headers = { "Content-Type": "application/json" };
+    const headers = {};
+    // Si body n'est PAS un FormData, ajoute Content-Type JSON
+    if (!(body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
     if (userId) {
-      headers["X-User-ID"] = userId; // Ajoute l'ID utilisateur dans le header
+      headers["X-User-ID"] = userId;
     }
 
     const response = await axios({
@@ -37,23 +52,22 @@ export const secureApiCall = async (url, method = "GET", body = null, userId = n
       method,
       data: body,
       headers,
+      withCredentials: true,
     });
     return response.data;
   } catch (error) {
     if (error.response?.status === 401) {
-      // Token expiré, essayons de rafraîchir
       try {
-        await axios.post(`${API_URL}/log/refresh`);
-        // Relancer la requête après le rafraîchissement
+        await axios.post(`${API_URL}/log/refresh`, null, { withCredentials: true });
         const retryResponse = await axios({
           url: `${API_URL}${url}`,
           method,
           data: body,
-          headers: { "Content-Type": "application/json" },
+          headers: buildHeaders(),
+          withCredentials: true,
         });
         return retryResponse.data;
       } catch (refreshError) {
-        // Échec du rafraîchissement
         throw new Error("Session expired. Please log in again.");
       }
     } else {

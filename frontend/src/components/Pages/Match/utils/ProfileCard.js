@@ -6,8 +6,8 @@ const ProfileCard = ({ profile, navigate, extraButtons }) => {
   return (
     <div className="bg-gray-800 shadow-lg rounded-lg p-3 border border-gray-700">
       <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-red-500 mx-auto">
-        {profile.profile_picture ? (
-          <img src={profile.profile_picture} alt={profile.username} className="w-full h-full object-cover" />
+        {profile.main_picture ? (
+          <img src={`data:image/jpeg;base64,${profile.main_picture}`} alt={profile.username} className="w-full h-full object-cover" />
         ) : (
           <UserCircleIcon className="w-full h-full text-gray-400" />
         )}

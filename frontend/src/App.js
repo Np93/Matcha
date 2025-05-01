@@ -10,6 +10,7 @@ import Match from "./components/Pages/Match/Match";
 // import Settings from "./components/Pages/Setting/Settings";
 import SettingLocation from "./components/Pages/Setting/SettingLocation";
 import SettingProfil from "./components/Pages/Setting/SettingProfil";
+import SettingPicture from "./components/Pages/Setting/SettingPicture";
 import Notif from "./components/Pages/Notification/NotificationsPage";
 import ProfileUser from "./components/Pages/Profile/ProfileOtherUser/ProfileUser";
 import CompleteProfile from "./components/Pages/CompleteProfile/CompleteProfile";
@@ -67,6 +68,10 @@ const App = () => {
             <Route
               path="/settings/profile"
               element={<ProtectedRoute element={SettingProfil} />}
+            />
+            <Route
+              path="/settings/pictures"
+              element={<ProtectedRoute element={SettingPicture} />}
             />
             <Route path="/profile/:username" element={<ProfileUser />} />
             <Route path="/complete-profile" element={<ProtectedRoute element={CompleteProfile} />} />

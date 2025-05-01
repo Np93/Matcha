@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+# from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 from datetime import datetime
 from app.utils.database import engine
@@ -106,3 +106,26 @@ async def update_location(conn, user_id: int, latitude: float, longitude: float,
         "last_updated": datetime.utcnow(),
         "user_id": user_id
     })
+
+async def get_all_inf_location_of_user(conn, user_id: int) -> dict | None:
+    result = await conn.execute(
+        text("""
+            SELECT latitude, longitude, city, country, location_method
+            FROM locations
+            WHERE user_id = :user_id
+            LIMIT 1;
+        """),
+        {"user_id": user_id}
+    )
+    row = result.mappings().first()
+
+    if not row:
+        return None
+
+    return {
+        "latitude": row["latitude"],
+        "longitude": row["longitude"],
+        "city": row["city"],
+        "country": row["country"],
+        "locationMethod": row["location_method"],
+    }

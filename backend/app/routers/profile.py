@@ -5,6 +5,7 @@ from app.user.user_service import get_user_by_id
 from app.routers.notifications import send_notification
 from app.match.match_service import get_liked_user_ids
 from app.profile.block_service import block_user, is_user_blocked
+from app.profile.picture_service import get_pictures_of_user
 from app.utils.database import engine
 import logging
 import re
@@ -23,6 +24,10 @@ async def get_profile(request: Request):
     print("ceci est les information dans profile_data dans la route: ", profile_data)
     if not profile_data:
         raise HTTPException(status_code=401, detail="Profile not found")
+
+    # Récupération des images via le service
+    profile_pictures = await get_pictures_of_user(user["id"])
+
     # Retourner les informations utilisateur
     return {
         "id": user["id"],
@@ -30,6 +35,7 @@ async def get_profile(request: Request):
         "first_name": user["first_name"],
         "last_name": user["last_name"],
         **profile_data,
+        "profile_pictures": profile_pictures
     }
 
 # @router.get("/user/{user_id}")
@@ -74,6 +80,8 @@ async def get_user_profile(user_id: int, request: Request):
         liked_user_ids = await get_liked_user_ids(conn, user_requesting["id"])
         is_liked = user_id in liked_user_ids
 
+        profile_pictures = await get_pictures_of_user(user_id)
+
         await send_notification(
             receiver_id=user_id,
             sender_id=user_requesting["id"],
@@ -90,6 +98,7 @@ async def get_user_profile(user_id: int, request: Request):
             "laste_connexion": user["laste_connexion"],
             "liked": is_liked,
             **profile_data,
+            "profile_pictures": profile_pictures
         }
 
 @router.post("/block")
