@@ -16,7 +16,7 @@ build: ## Construire les images Docker pour tous les services
 
 # Démarrer les services
 up: ## Démarrer tous les services en arrière-plan
-	$(DC) up -d
+	$(DC) up
 	@echo "Containers are up."
 
 # Supprimer les conteneurs mais conserver les volumes
