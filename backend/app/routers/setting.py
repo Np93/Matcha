@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, UploadFile, File
 from PIL import Image
 from io import BytesIO
 from app.utils.jwt_handler import verify_user_from_token
+from app.utils.database import engine
 from app.profile.location_service import update_location, get_all_inf_location_of_user
 from app.profile.block_service import get_blocked_users, unblock_users
 from app.profile.picture_service import count_user_pictures, insert_picture, get_pictures_of_user, delete_user_pictures_by_ids, set_main_picture

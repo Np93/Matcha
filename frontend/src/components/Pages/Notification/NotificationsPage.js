@@ -1,28 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../../../utils/api";
-import { useNavigate } from "react-router-dom";
+import NotificationItem from "./utils/NotificationItem";
+import NotificationModal from "./utils/NotificationModal";
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
-  const navigate = useNavigate();
+  const [selectedNotification, setSelectedNotification] = useState(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        // 1️ Récupération des notifications
         const response = await secureApiCall("/notifications/notifications");
-        // console.log("Notifications récupérées :", response);
         setNotifications(response);
 
-        // 2️ Filtrer les notifications non lues et récupérer leurs IDs
-        const unreadNotificationIds = response
-          .filter((notif) => !notif.is_read)
-          .map((notif) => notif.id);
-
-        // 3️ Si des notifications sont non lues, les envoyer au backend pour les passer en "lues"
-        if (unreadNotificationIds.length > 0) {
+        const unreadIds = response.filter(n => !n.is_read).map(n => n.id);
+        if (unreadIds.length) {
           await secureApiCall("/notifications/mark-read", "POST", {
-            notification_ids: unreadNotificationIds,
+            notification_ids: unreadIds
           });
         }
       } catch (error) {
@@ -33,22 +27,44 @@ const NotificationsPage = () => {
     fetchNotifications();
   }, []);
 
+  const unread = notifications.filter(n => !n.is_read);
+  const read = notifications.filter(n => n.is_read);
+
   return (
-    <div className="max-w-lg mx-auto mt-10 p-5 bg-gray-900 text-white rounded-lg">
-      <h2 className="text-xl font-bold mb-4">Notifications</h2>
-      <ul>
-        {notifications.map((notif, index) => (
-          <li
-            key={index}
-            className={`border-b border-gray-700 p-3 cursor-pointer 
-              ${notif.is_read ? "bg-gray-800 text-gray-400" : "bg-gray-700 text-white font-bold"}`}
-            onClick={() => navigate(`/profile/${notif.sender_name}`, { state: { userId: notif.sender_id } })}
-          >
-            <strong>{notif.sender_name}</strong>: {notif.context}
-            <p className="text-xs text-gray-400">{notif.timestamp}</p>
-          </li>
-        ))}
-      </ul>
+    <div className="max-w-2xl mx-auto mt-10 p-4 text-white">
+      <h2 className="text-2xl font-bold mb-6 text-center">Notifications</h2>
+
+      {/* Non lues */}
+      <div>
+        <h3 className="text-lg font-semibold text-red-400 mb-2">New</h3>
+        {unread.length === 0 ? (
+          <p className="text-sm text-gray-400 mb-4">No new notifications</p>
+        ) : (
+          <div className="space-y-2 mb-6">
+            {unread.map((notif) => (
+              <NotificationItem key={notif.id} notification={notif} onClick={() => setSelectedNotification(notif)} isNew />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lues */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-300 mb-2">History</h3>
+        <div className="max-h-80 overflow-y-auto space-y-2 pr-2">
+          {read.map((notif) => (
+            <NotificationItem key={notif.id} notification={notif} onClick={() => setSelectedNotification(notif)} />
+          ))}
+        </div>
+      </div>
+
+      {/* Modale */}
+      {selectedNotification && (
+        <NotificationModal
+          notification={selectedNotification}
+          onClose={() => setSelectedNotification(null)}
+        />
+      )}
     </div>
   );
 };
