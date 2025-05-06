@@ -1,7 +1,5 @@
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.database import engine
-# from app.tables.users import users_table
 from bcrypt import hashpw, gensalt, checkpw
 from sqlalchemy.sql import text
 

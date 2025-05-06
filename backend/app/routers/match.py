@@ -188,4 +188,12 @@ async def like_profile(request: Request, data: dict):
         await increment_fame_rating(liked_id, amount=7)
         return {"matched": True}
 
+    # Notification pour un simple like (pas encore un match)
+    await send_notification(
+        receiver_id=liked_id,
+        sender_id=liker_id,
+        notification_type="like",
+        context=f"{user['username']} a liké votre profil ❤️"
+    )
+
     return {"matched": False}

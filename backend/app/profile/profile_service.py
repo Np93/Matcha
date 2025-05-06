@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 from app.utils.database import engine
 from fastapi import HTTPException
