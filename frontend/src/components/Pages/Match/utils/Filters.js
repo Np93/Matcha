@@ -30,7 +30,7 @@ const Filters = ({ filters, handleRangeChange, toggleTags, fetchProfilesWithFilt
           {filters.minFame} - {filters.maxFame} / 5
         </p>
         <DualSlider
-          min={1}
+          min={0}
           max={5}
           minValue={filters.minFame}
           maxValue={filters.maxFame}

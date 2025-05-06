@@ -64,10 +64,6 @@ async def get_profiles(request: Request):
         "can_like": has_main_picture,
         "profiles": sorted_profiles
     }
-    # Trier les profils selon distance > tags > fame rating
-    # sorted_profiles = await sort_profiles(profiles_with_details)
-
-    # return sorted_profiles
 
 @router.get("/filter_profiles")
 async def filter_profiles(request: Request):
@@ -80,8 +76,8 @@ async def filter_profiles(request: Request):
     maxAge = int(query_params.get("maxAge", 99))
     minDistance = int(query_params.get("minDistance", 0))
     maxDistance = query_params.get("maxDistance", "world")
-    minFame = int(query_params.get("minFame", 1))
-    maxFame = int(query_params.get("maxFame", 5))
+    minFame = int(query_params.get("minFame", 1)) * 10
+    maxFame = int(query_params.get("maxFame", 5)) * 10
     filterByTags = query_params.get("filterByTags", "false").lower() == "true"
    
     #Vérifier l'utilisateur connecté
@@ -114,17 +110,19 @@ async def filter_profiles(request: Request):
             user_lat, user_lon, user_interests, liked_user_ids, profiles
         )
 
+        for profile in enriched_profiles:
+            print("profile:", profile["id"], "fame_rating =", profile.get("fame_rating"))
+
         # Filtrer selon critères fournis
         filtered_profiles = [
             profile for profile in enriched_profiles
             if (
                 (minAge <= profile["age"] <= maxAge) and
-                # (minFame <= profile.get("fame_rating", 0) <= maxFame) and
+                (minFame <= profile.get("fame_rating", 0) <= maxFame) and
                 (maxDistance == "world" or (minDistance <= profile["distance_km"] <= int(maxDistance))) and
                 (not filterByTags or profile["common_tags"] > 0)
             )
         ]
-
     async def is_not_blocked(profile):
         return not await are_users_blocked(user_id, profile["id"])
 
@@ -140,7 +138,6 @@ async def filter_profiles(request: Request):
         "can_like": has_main_picture,
         "profiles": not_blocked_profiles
     }
-    # return filtered_profiles
 
 @router.post("/like")
 async def like_profile(request: Request, data: dict):

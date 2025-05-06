@@ -7,6 +7,7 @@ from app.match.match_service import get_liked_user_ids
 from app.profile.block_service import block_user, is_user_blocked
 from app.profile.picture_service import get_pictures_of_user
 from app.profile.picture_service import get_main_picture_of_user
+from app.profile.report_service import insert_report, count_reports_against_user, delete_user_by_id
 from app.utils.database import engine
 import logging
 import re
@@ -120,4 +121,27 @@ async def block(request: Request, data: dict):
     # print("la personne est bloquer")
     # print(is_bloked)
     return {"message": "User blocked successfully"}
+
+@router.post("/report")
+async def report_user(request: Request, data: dict):
+    user = await verify_user_from_token(request)
+    reporter_id = user["id"]
+    reported_id = data.get("targetId")
+
+    if reporter_id == reported_id:
+        raise HTTPException(status_code=400, detail="You cannot report yourself")
+
+    # Insertion + vérification doublon
+    success = await insert_report(reporter_id, reported_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="You already reported this user")
+
+    # Compter les signalements reçus
+    count = await count_reports_against_user(reported_id)
+
+    # Supprimer le compte si trop de reports
+    if count >= 3:
+        await delete_user_by_id(reported_id)
+
+    return {"message": "User reported successfully", "reports": count}
     

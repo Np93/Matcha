@@ -54,7 +54,7 @@ const CompleteProfile = () => {
     }
 
     // Formater la date au format YYYY-MM-DD
-    const formattedBirthday = birthday.toISOString().split("T")[0];
+    const formattedBirthday = birthday.toLocaleDateString("en-CA");
 
     try {
       const response = await secureApiCall("/profiles_complete/", "POST", {

@@ -12,7 +12,7 @@ const Match = () => {
   const [filters, setFilters] = useState({
     minAge: 18,
     maxAge: 99,
-    minFame: 1,
+    minFame: 0,
     maxFame: 5,
     minDistance: 0,
     maxDistance: 500,
@@ -66,11 +66,21 @@ const Match = () => {
     );
   };
 
+  const fieldMap = {
+    age: "age",
+    distance: "distance_km",
+    tags: "common_tags",
+    fame: "fame_rating",
+  };
+
   const sortedProfiles = [...profiles].sort((a, b) => {
-    for (const criteria of ["age", "distance", "tags", "fame"]) {
-      if (sortCriteria.includes(criteria)) {
-        if (a[criteria] !== b[criteria]) {
-          return a[criteria] - b[criteria];
+    for (const criteria of sortCriteria) {
+      const field = fieldMap[criteria];
+      if (field) {
+        if (a[field] !== b[field]) {
+          // Pour tags et fame, on trie en décroissant
+          const multiplier = ["tags", "fame"].includes(criteria) ? -1 : 1;
+          return multiplier * (a[field] - b[field]);
         }
       }
     }
@@ -95,7 +105,7 @@ const Match = () => {
             {sortedProfiles.length > 0 ? (
               sortedProfiles.map((profile) => (
                 <ProfileCard
-                  key={profile.id}
+                  key={`${profile.id}-${profile.age}-${profile.distance_km}-${profile.common_tags}`}
                   profile={profile}
                   navigate={navigate}
                   extraButtons={

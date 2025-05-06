@@ -16,7 +16,7 @@ const ProfileCard = ({ profile, navigate, extraButtons }) => {
       <p className="text-xs text-gray-400 text-center">Age: {profile.age}</p>
       <p className="text-xs text-gray-400 text-center">Distance: {profile.distance_km} km</p>
       <div className="mt-1">
-        <FameRatingStars fame_rating={profile.fame_rating} />
+        <FameRatingStars fame_rating={profile.fame_rating} uniqueId={profile.id} />
       </div>
       {/* <p className="text-xs text-gray-400 text-center">Fame: {profile.fame_rating}</p> */}
       <p className="text-xs text-gray-400 text-center">Common Tags: {profile.common_tags}</p>
