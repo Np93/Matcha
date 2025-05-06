@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.utils.jwt_handler import verify_user_from_token
-from app.utils.database import async_session, engine
+from app.utils.database import engine
 from app.chat.chat_service import create_conversation
 from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles
 from app.user.user_service import get_user_by_id
@@ -9,7 +9,6 @@ from app.profile.location_service import haversine, get_user_location
 from app.routers.notifications import send_notification
 from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
 from app.profile.picture_service import get_main_picture_of_user
-from sqlalchemy.sql import text
 import json
 
 router = APIRouter()
