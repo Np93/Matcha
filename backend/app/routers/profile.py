@@ -1,6 +1,6 @@
 from app.utils.jwt_handler import verify_user_from_token
 from fastapi import APIRouter, HTTPException, Request, Response
-from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
+from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating, upsert_profile
 from app.user.user_service import get_user_by_id
 from app.routers.notifications import send_notification
 from app.match.match_service import get_liked_user_ids, check_if_unliked
@@ -147,4 +147,38 @@ async def report_user(request: Request, data: dict):
         await delete_user_by_id(reported_id)
 
     return {"message": "User reported successfully", "reports": count}
+
+@router.put("/{user_id}")
+async def update_profile(user_id: int, request: Request, data: dict):
+    """Met à jour le profil d'un utilisateur."""
+    user = await verify_user_from_token(request)
     
+    # Vérifier que l'utilisateur ne modifie que son propre profil
+    if int(user["id"]) != int(user_id):
+        raise HTTPException(status_code=403, detail="You can only update your own profile")
+    
+    # Extraire les données du profil
+    gender = data.get("gender")
+    sexual_preferences = data.get("sexual_preferences")
+    biography = data.get("biography")
+    birthday = data.get("birthday")
+    
+    # Gérer les intérêts qui peuvent être soit une liste, soit une chaîne à diviser
+    interests = data.get("interests")
+    if isinstance(interests, str):
+        # Si c'est une chaîne, on la divise et nettoie
+        interests = [tag.strip() for tag in interests.split(",") if tag.strip()]
+    elif not isinstance(interests, list):
+        interests = []
+    
+    # Mettre à jour le profil
+    await upsert_profile(
+        user_id=user_id,
+        gender=gender,
+        sexual_preferences=sexual_preferences,
+        biography=biography,
+        interests=interests,
+        birthday=birthday
+    )
+    
+    return {"message": "Profile updated successfully"}
