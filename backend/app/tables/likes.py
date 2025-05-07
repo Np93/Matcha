@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, Integer, ForeignKey, MetaData, DateTime, UniqueConstraint
+from sqlalchemy import Table, Column, Integer, ForeignKey, MetaData, DateTime, UniqueConstraint, Boolean
 from datetime import datetime
 from sqlalchemy.sql import text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
@@ -12,5 +12,6 @@ likes_table = Table(
     Column("liked_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     # Column("created_at", DateTime, default=datetime.utcnow, nullable=False),
     Column("created_at", TIMESTAMP(timezone=True), server_default=text("NOW()"), nullable=False),
+    Column("unlike", Boolean, server_default=text("FALSE"), nullable=False),
     UniqueConstraint("liker_id", "liked_id")  # Empêche les doublons
 )

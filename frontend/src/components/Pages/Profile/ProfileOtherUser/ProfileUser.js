@@ -11,7 +11,7 @@ import {
   ExclamationTriangleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
-import LikeButton from "../../../../utils/LikeButton";
+import LikeButton from "./utils/LikeUnLikeButton";
 
 const ProfileUser = () => {
   const { username } = useParams();
@@ -114,8 +114,10 @@ const ProfileUser = () => {
           userId={userId}
           targetId={profileId}
           isLiked={profileData.liked}
+          isUnliked={profileData.unlike}
           disabled={!canLike}
           onLike={() => setProfileData({ ...profileData, liked: true })}
+          onUnlike={() => setProfileData({ ...profileData, liked: false, unlike: true })}
         />
         <button
           className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 bg-yellow-500 text-white hover:bg-yellow-600"

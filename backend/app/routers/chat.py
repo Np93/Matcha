@@ -4,6 +4,7 @@ from app.profile.block_service import are_users_blocked
 from app.routers.notifications import send_notification
 from app.chat.chat_service import get_user_conversations_from_db, get_messages_from_conversation, get_conversation_users, insert_message
 from jose import JWTError, jwt
+from app.match.match_service import check_if_unliked
 import json, base64
 
 router = APIRouter()
@@ -20,17 +21,26 @@ async def get_user_conversations(request: Request):
     filtered = []
     for row in raw_conversations:
         other_id = row.other_user_id
-        if not await are_users_blocked(user_id, other_id):
-            avatar = (
-                f"data:image/jpeg;base64,{base64.b64encode(row.profile_picture).decode('utf-8')}"
-                if row.profile_picture else None
-            )
-            filtered.append({
-                "id": row.conversation_id,
-                "name": row.other_username,
-                "avatar": avatar,
-                "isOnline": row.is_online,
-            })
+
+        # Ne pas afficher si bloqué
+        if await are_users_blocked(user_id, other_id):
+            continue
+
+        # Ne pas afficher si un des deux a unliked l'autre
+        if await check_if_unliked(user_id, other_id) or await check_if_unliked(other_id, user_id):
+            continue
+
+        avatar = (
+            f"data:image/jpeg;base64,{base64.b64encode(row.profile_picture).decode('utf-8')}"
+            if row.profile_picture else None
+        )
+        filtered.append({
+            "id": row.conversation_id,
+            "name": row.other_username,
+            "avatar": avatar,
+            "isOnline": row.is_online,
+        })
+
     return filtered
 
 @router.get("/messages/{conversation_id}")

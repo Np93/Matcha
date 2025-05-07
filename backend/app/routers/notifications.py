@@ -7,6 +7,7 @@ from app.notifications.notifications_service import (
     mark_notifications_as_read,
     can_send_notification
 )
+from app.match.match_service import check_if_unliked
 import json
 
 router = APIRouter()
@@ -64,6 +65,9 @@ async def mark_read(request: Request, data: dict):
 
 async def send_notification(receiver_id, sender_id, notification_type, context):
     if not await can_send_notification(receiver_id, sender_id):
+        return
+
+    if await check_if_unliked(receiver_id, sender_id):
         return
 
     notif = await insert_notification(receiver_id, sender_id, notification_type, context)

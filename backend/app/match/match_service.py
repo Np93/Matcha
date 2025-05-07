@@ -1,51 +1,87 @@
 from sqlalchemy.sql import text
 from datetime import datetime
-from app.utils.database import async_session
+from app.utils.database import engine
 from app.profile.location_service import haversine
 
 async def check_same_like(liker_id: int, liked_id: int):
     """Vérifie si un like identique existe."""
-    async with async_session() as session:
-        async with session.begin():
-            query = text("""
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text("""
                 SELECT 1 FROM likes
                 WHERE liker_id = :liker_id AND liked_id = :liked_id
                 LIMIT 1;
-            """)
-            result = await session.execute(query, {
-                "liker_id": liker_id,
-                "liked_id": liked_id
-            })
-            return result.fetchone()
+            """),
+            {"liker_id": liker_id, "liked_id": liked_id}
+        )
+        return result.first()
 
 async def insert_like(liker_id: int, liked_id: int):
     """Insère un like si inexistant."""
-    async with async_session() as session:
-        async with session.begin():
-            query = text("""
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("""
                 INSERT INTO likes (liker_id, liked_id, created_at)
                 VALUES (:liker_id, :liked_id, NOW())
                 ON CONFLICT DO NOTHING;
-            """)
-            await session.execute(query, {
-                "liker_id": liker_id,
-                "liked_id": liked_id
-            })
+            """),
+            {"liker_id": liker_id, "liked_id": liked_id}
+        )
 
 async def check_match(liker_id: int, liked_id: int):
     """Vérifie s'il y a un match (like inverse)."""
-    async with async_session() as session:
-        async with session.begin():
-            query = text("""
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text("""
                 SELECT 1 FROM likes
                 WHERE liker_id = :liked_id AND liked_id = :liker_id
                 LIMIT 1;
-            """)
-            result = await session.execute(query, {
-                "liked_id": liked_id,
-                "liker_id": liker_id
-            })
-            return result.fetchone()
+            """),
+            {"liked_id": liked_id, "liker_id": liker_id}
+        )
+        return result.first()
+
+async def check_if_unliked(liker_id: int, liked_id: int) -> bool:
+    query = text("""
+        SELECT unlike
+        FROM likes
+        WHERE liker_id = :liker_id AND liked_id = :liked_id
+        LIMIT 1
+    """)
+    
+    async with engine.begin() as conn:
+        result = await conn.execute(query, {"liker_id": liker_id, "liked_id": liked_id})
+        row = result.fetchone()
+        if row:
+            return row.unlike
+        return False  # Aucun like trouvé = pas unliked
+
+async def set_unlike_status(liker_id: int, liked_id: int) -> bool:
+    async with engine.begin() as conn:
+        # Vérifier si la ligne existe déjà et si "unlike" est déjà True
+        result = await conn.execute(
+            text("""
+                SELECT unlike FROM likes
+                WHERE liker_id = :liker_id AND liked_id = :liked_id
+            """),
+            {"liker_id": liker_id, "liked_id": liked_id}
+        )
+        row = result.first()
+        if not row:
+            return False  # Aucune ligne à modifier
+        if row.unlike:
+            return False  # Déjà à True, rien à faire
+
+        # Mettre à jour le champ unlike à TRUE
+        await conn.execute(
+            text("""
+                UPDATE likes
+                SET unlike = TRUE
+                WHERE liker_id = :liker_id AND liked_id = :liked_id
+            """),
+            {"liker_id": liker_id, "liked_id": liked_id}
+        )
+        return True
 
 async def get_liked_user_ids(conn, user_id):
     """Récupère les utilisateurs déjà likés par l'utilisateur."""

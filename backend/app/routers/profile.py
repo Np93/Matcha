@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
 from app.user.user_service import get_user_by_id
 from app.routers.notifications import send_notification
-from app.match.match_service import get_liked_user_ids
+from app.match.match_service import get_liked_user_ids, check_if_unliked
 from app.profile.block_service import block_user, is_user_blocked
 from app.profile.picture_service import get_pictures_of_user
 from app.profile.picture_service import get_main_picture_of_user
@@ -82,6 +82,8 @@ async def get_user_profile(user_id: int, request: Request):
         liked_user_ids = await get_liked_user_ids(conn, user_requesting["id"])
         is_liked = user_id in liked_user_ids
 
+        unlike = await check_if_unliked(user_requesting["id"], user_id)
+
         profile_pictures = await get_pictures_of_user(user_id)
 
         has_main_picture = bool(await get_main_picture_of_user(user_requesting["id"]))
@@ -101,6 +103,7 @@ async def get_user_profile(user_id: int, request: Request):
             "status": user["status"],
             "laste_connexion": user["laste_connexion"],
             "liked": is_liked,
+            "unlike": unlike,
             **profile_data,
             "can_like": has_main_picture,
             "profile_pictures": profile_pictures

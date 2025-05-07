@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.utils.jwt_handler import verify_user_from_token
 from app.utils.database import engine
 from app.chat.chat_service import create_conversation
-from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles
+from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles, set_unlike_status, check_if_unliked
 from app.user.user_service import get_user_by_id
 from app.profile.block_service import are_users_blocked, async_generator_filter
 from app.profile.location_service import haversine, get_user_location
@@ -151,6 +151,10 @@ async def like_profile(request: Request, data: dict):
 
     if await are_users_blocked(liker_id, liked_id):
         return {"matched": False}
+    
+    # Si un des deux utilisateurs a unliked l’autre → aucun effet
+    if await check_if_unliked(liker_id, liked_id) or await check_if_unliked(liked_id, liker_id):
+        return {"matched": False}
 
     # Vérifie que le liker a une photo
     main_pic = await get_main_picture_of_user(liker_id)
@@ -197,3 +201,19 @@ async def like_profile(request: Request, data: dict):
     )
 
     return {"matched": False}
+
+@router.post("/unlike")
+async def unlike_user(request: Request, data: dict):
+    """Permet de 'unlike' un utilisateur, empêche toute interaction future."""
+    user = await verify_user_from_token(request)
+    liker_id = user["id"]
+    liked_id = data.get("targetId")
+
+    if liker_id == liked_id:
+        raise HTTPException(status_code=400, detail="You cannot unlike yourself")
+
+    updated = await set_unlike_status(liker_id, liked_id)
+    if not updated:
+        raise HTTPException(status_code=400, detail="Cannot unlike this user")
+
+    return {"message": "User unliked successfully"}
