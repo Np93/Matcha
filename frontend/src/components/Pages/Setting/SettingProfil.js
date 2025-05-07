@@ -9,7 +9,7 @@ const predefinedInterests = [
 ];
 
 const SettingProfil = () => {
-  const { userId } = useAuth();
+  const { userId, userEmail } = useAuth(); // Get email from auth context
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [activeTab, setActiveTab] = useState("profile");
@@ -18,6 +18,7 @@ const SettingProfil = () => {
     username: "",
     first_name: "",
     last_name: "",
+    email: userEmail || "", // Pre-fill email from auth context
     gender: "",
     birthday: "",
     sexual_preferences: "",
@@ -25,34 +26,48 @@ const SettingProfil = () => {
     interests: [],
     fame_rating: 0
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBlockedUsers = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        const response = await secureApiCall("/setting/blocked", "GET");
-        setBlockedUsers(response.blocked_users || []);
-      } catch (error) {
-        console.error("Failed to fetch blocked users:", error);
-      }
-    };
-
-    const fetchProfile = async () => {
-      try {
-        // First fetch the general profile data
-        const response = await secureApiCall("/profile", "GET");
+        // Fetch all user data in parallel
+        const [blockedResponse, profileResponse] = await Promise.all([
+          secureApiCall("/setting/blocked", "GET"),
+          secureApiCall("/profile", "GET")
+        ]);
+        
+        setBlockedUsers(blockedResponse.blocked_users || []);
+        
+        console.log("Profile response:", profileResponse);
+        
+        // Handle the case where birthday might be null from the backend
+        let formattedBirthday = "";
+        if (profileResponse.birthday) {
+          formattedBirthday = profileResponse.birthday;
+          if (!formattedBirthday.includes("-")) {
+            // Convert to YYYY-MM-DD format for date input if needed
+            const date = new Date(formattedBirthday);
+            formattedBirthday = date.toISOString().split('T')[0];
+          }
+        }
         
         setProfileData({
-          ...response,
-          interests: Array.isArray(response.interests) ? response.interests : []
+          ...profileResponse,
+          email: profileResponse.email || userEmail || "", // Ensure email is set
+          birthday: formattedBirthday,
+          interests: Array.isArray(profileResponse.interests) ? profileResponse.interests : []
         });
       } catch (error) {
-        console.error("Failed to fetch profile data:", error);
+        console.error("Failed to fetch user data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchBlockedUsers();
-    fetchProfile();
-  }, [userId]);
+    fetchData();
+  }, [userId, userEmail]);
 
   const toggleSelection = (id) => {
     setSelectedIds((prev) =>
@@ -70,7 +85,7 @@ const SettingProfil = () => {
     }
   };
 
-  const handleProfileChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setProfileData((prev) => ({ ...prev, [name]: value }));
   };
@@ -102,21 +117,32 @@ const SettingProfil = () => {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Only send the fields that can be modified
-      const dataToSubmit = {
+      // Update user info (personal details)
+      await secureApiCall(`/profile/user_info/${userId}`, "PUT", {
+        username: profileData.username,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        email: profileData.email
+      });
+      
+      // Update profile data (preferences and details)
+      await secureApiCall(`/profile/${userId}`, "PUT", {
         gender: profileData.gender,
         sexual_preferences: profileData.sexual_preferences,
         biography: profileData.biography,
         interests: profileData.interests
-      };
+      });
       
-      await secureApiCall(`/profile/${userId}`, "PUT", dataToSubmit);
       alert("Profile updated successfully!");
     } catch (error) {
       console.error("Failed to update profile:", error);
-      alert("Failed to update profile.");
+      alert(error.message || "Failed to update profile.");
     }
   };
+
+  if (loading) {
+    return <div className="p-6 text-white">Loading profile data...</div>;
+  }
 
   return (
     <div className="p-6 text-white bg-gray-950 min-h-screen">
@@ -138,63 +164,49 @@ const SettingProfil = () => {
       {activeTab === "profile" ? (
         <div>
           <h2 className="text-2xl font-bold mb-4">Edit Profile</h2>
-          <div className="bg-red-900 p-3 rounded-md mb-4">
-            <p className="text-white font-bold">You can only modify the following fields:</p>
-            <ul className="list-disc pl-5 text-white">
-              <li>Gender</li>
-              <li>Sexual preferences</li>
-              <li>Biography</li>
-              <li>List of interests (tags)</li>
-            </ul>
-            <p className="text-white mt-2">Other information cannot be updated.</p>
-          </div>
           <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <h3 className="text-xl font-semibold mt-6 border-b border-gray-700 pb-2">Personal Information</h3>
             <div>
-              <label className="block text-sm font-medium">Username (Read-only)</label>
+              <label className="block text-sm font-medium">Username</label>
               <input
                 type="text"
                 name="username"
                 value={profileData.username || ""}
-                className="w-full p-2 bg-gray-800 text-white rounded opacity-70 cursor-not-allowed"
-                readOnly
+                onChange={handleInputChange}
+                className="w-full p-2 bg-gray-800 text-white rounded"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium">First Name (Read-only)</label>
+                <label className="block text-sm font-medium">First Name</label>
                 <input
                   type="text"
                   name="first_name"
                   value={profileData.first_name || ""}
-                  className="w-full p-2 bg-gray-800 text-white rounded opacity-70 cursor-not-allowed"
-                  readOnly
+                  onChange={handleInputChange}
+                  className="w-full p-2 bg-gray-800 text-white rounded"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium">Last Name (Read-only)</label>
+                <label className="block text-sm font-medium">Last Name</label>
                 <input
                   type="text"
                   name="last_name"
                   value={profileData.last_name || ""}
-                  className="w-full p-2 bg-gray-800 text-white rounded opacity-70 cursor-not-allowed"
-                  readOnly
+                  onChange={handleInputChange}
+                  className="w-full p-2 bg-gray-800 text-white rounded"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium">Gender (Editable)</label>
-              <select
-                name="gender"
-                value={profileData.gender || ""}
-                onChange={handleProfileChange}
+              <label className="block text-sm font-medium">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={profileData.email || ""}
+                onChange={handleInputChange}
                 className="w-full p-2 bg-gray-800 text-white rounded"
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="other">Other</option>
-              </select>
+              />
             </div>
             <div>
               <label className="block text-sm font-medium">Birthday (Read-only)</label>
@@ -206,12 +218,29 @@ const SettingProfil = () => {
                 readOnly
               />
             </div>
+            
+            <h3 className="text-xl font-semibold mt-6 border-b border-gray-700 pb-2">Profile Details</h3>
             <div>
-              <label className="block text-sm font-medium">Sexual Preferences (Editable)</label>
+              <label className="block text-sm font-medium">Gender</label>
+              <select
+                name="gender"
+                value={profileData.gender || ""}
+                onChange={handleInputChange}
+                className="w-full p-2 bg-gray-800 text-white rounded"
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Sexual Preferences</label>
               <select
                 name="sexual_preferences"
                 value={profileData.sexual_preferences || ""}
-                onChange={handleProfileChange}
+                onChange={handleInputChange}
                 className="w-full p-2 bg-gray-800 text-white rounded"
               >
                 <option value="">Select Preference</option>
@@ -222,19 +251,19 @@ const SettingProfil = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Biography (Editable)</label>
+              <label className="block text-sm font-medium">Biography</label>
               <textarea
                 name="biography"
                 value={profileData.biography || ""}
-                onChange={handleProfileChange}
+                onChange={handleInputChange}
                 className="w-full p-2 bg-gray-800 text-white rounded"
                 rows="4"
               />
             </div>
             
-            {/* Interests Section - Updated to match CompleteProfile */}
+            {/* Interests Section */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Interests (Editable)</label>
+              <label className="block text-sm font-medium">Interests</label>
               
               {/* Predefined Interests */}
               <div className="flex flex-wrap gap-2">
@@ -307,7 +336,7 @@ const SettingProfil = () => {
               type="submit"
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded"
             >
-              Save Changes
+              Save All Changes
             </button>
           </form>
         </div>

@@ -1,7 +1,7 @@
 from app.utils.jwt_handler import verify_user_from_token
 from fastapi import APIRouter, HTTPException, Request, Response
 from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating, upsert_profile
-from app.user.user_service import get_user_by_id
+from app.user.user_service import get_user_by_id, update_user_info, get_user_by_email, get_user_by_username
 from app.routers.notifications import send_notification
 from app.match.match_service import get_liked_user_ids, check_if_unliked
 from app.profile.block_service import block_user, is_user_blocked
@@ -36,6 +36,7 @@ async def get_profile(request: Request):
         "username": user["username"],
         "first_name": user["first_name"],
         "last_name": user["last_name"],
+        "email": user["email"],  # Explicitly include email from user data
         **profile_data,
         "profile_pictures": profile_pictures
     }
@@ -182,3 +183,56 @@ async def update_profile(user_id: int, request: Request, data: dict):
     )
     
     return {"message": "Profile updated successfully"}
+
+@router.put("/user_info/{user_id}")
+async def update_user_information(user_id: int, request: Request, data: dict):
+    """Met à jour les informations de l'utilisateur (nom, prénom, email, username)."""
+    user = await verify_user_from_token(request)
+    
+    # Vérifier que l'utilisateur ne modifie que ses propres informations
+    if int(user["id"]) != int(user_id):
+        raise HTTPException(status_code=403, detail="You can only update your own information")
+    
+    # Extraire les données utilisateur
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    email = data.get("email")
+    username = data.get("username")
+    
+    # Valider les données
+    if email and not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    
+    if first_name and not re.match(r"^[a-zA-Z]+$", first_name):
+        raise HTTPException(status_code=400, detail="Invalid first name")
+    
+    if last_name and not re.match(r"^[a-zA-Z]+$", last_name):
+        raise HTTPException(status_code=400, detail="Invalid last name")
+    
+    if username and not re.match(r"^[a-zA-Z0-9_.-]+$", username):
+        raise HTTPException(status_code=400, detail="Invalid username format")
+    
+    # Vérifier si l'email ou le username est déjà utilisé
+    if email and email != user["email"]:
+        existing_user = await get_user_by_email(email)
+        if existing_user and existing_user["id"] != user_id:
+            raise HTTPException(status_code=400, detail="Email already in use")
+    
+    if username and username != user["username"]:
+        existing_user = await get_user_by_username(username)
+        if existing_user and existing_user["id"] != user_id:
+            raise HTTPException(status_code=400, detail="Username already in use")
+    
+    # Mettre à jour l'utilisateur
+    success = await update_user_info(
+        user_id=user_id,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        username=username
+    )
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="No information to update")
+    
+    return {"message": "User information updated successfully"}

@@ -88,3 +88,39 @@ async def update_user_status(user_id: str, status: bool):
             "status": status,
             "laste_connexion": datetime.utcnow()  # Enregistre l'heure actuelle en UTC
         })
+
+async def update_user_info(user_id: int, first_name: str = None, last_name: str = None, email: str = None, username: str = None):
+    """Met à jour les informations de l'utilisateur (nom, prénom, email)."""
+    # Build the SQL query based on provided fields
+    update_parts = []
+    params = {"user_id": user_id}
+    
+    if first_name:
+        update_parts.append("first_name = :first_name")
+        params["first_name"] = first_name
+    
+    if last_name:
+        update_parts.append("last_name = :last_name")
+        params["last_name"] = last_name
+    
+    if email:
+        update_parts.append("email = :email")
+        params["email"] = email
+    
+    if username:
+        update_parts.append("username = :username")
+        params["username"] = username
+        
+    # If no fields to update, return early
+    if not update_parts:
+        return False
+        
+    query = text(f"""
+        UPDATE users 
+        SET {", ".join(update_parts)}
+        WHERE id = :user_id;
+    """)
+
+    async with engine.begin() as conn:
+        await conn.execute(query, params)
+        return True
