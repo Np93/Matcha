@@ -33,7 +33,7 @@ def validate_password(password: str) -> bool:
         return False
     return True
 
-def validate_text_field(value: str, field_name: str, regex: str = r"^[a-zA-Z\s]+$"):
+def validate_text_field(value: str, field_name: str, regex: str = r"^[a-zA-Z\s\-]+$"):
     """
     Valide un champ texte en vérifiant qu'il respecte un motif regex.
     """

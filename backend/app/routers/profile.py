@@ -162,7 +162,10 @@ async def update_profile(user_id: int, request: Request, data: dict):
     gender = data.get("gender")
     sexual_preferences = data.get("sexual_preferences")
     biography = data.get("biography")
-    birthday = data.get("birthday")
+    
+    # Get existing profile data to preserve birthday if not provided
+    existing_profile = await get_profile_by_user_id(user_id)
+    birthday = data.get("birthday", existing_profile.get("birthday") if existing_profile else None)
     
     # Gérer les intérêts qui peuvent être soit une liste, soit une chaîne à diviser
     interests = data.get("interests")
