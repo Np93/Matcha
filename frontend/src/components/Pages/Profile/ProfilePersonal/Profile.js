@@ -65,6 +65,10 @@ const Profile = () => {
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <CalendarDaysIcon className="w-6 h-6 text-red-500" />
+          <p><strong>Email:</strong> {profileData.email || "N/A"}</p>
+        </div>
+        <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
+          <CalendarDaysIcon className="w-6 h-6 text-red-500" />
           <p><strong>Birthday:</strong> {profileData.birthday || "N/A"}</p>
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
