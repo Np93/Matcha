@@ -6,6 +6,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60  # Durée de validité du token (en minutes)
 
+    google_client_id: str
+    google_client_secret: str
+    google_auth_url: str
+    google_token_url: str
+    google_api_base: str
+    google_scope: str
+
+    frontend_url: str
+
     class Config:
         env_file = ".env"
 

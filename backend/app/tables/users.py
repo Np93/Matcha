@@ -13,7 +13,7 @@ users_table = Table(
     Column("username", String, unique=True, nullable=False),
     Column("first_name", String, nullable=False),
     Column("last_name", String, nullable=False),
-    Column("password_hash", String, nullable=False),
+    Column("password_hash", String, nullable=True),
     Column("created_at", TIMESTAMP(timezone=True), server_default=text("NOW()"), nullable=False),
     # Column("created_at", DateTime, default=datetime.utcnow, nullable=False),
     Column("status", Boolean, default=False, nullable=False),

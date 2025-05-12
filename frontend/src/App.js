@@ -15,6 +15,7 @@ import Notif from "./components/Pages/Notification/NotificationsPage";
 import ProfileUser from "./components/Pages/Profile/ProfileOtherUser/ProfileUser";
 import CompleteProfile from "./components/Pages/CompleteProfile/CompleteProfile";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import OAuthSuccess from "./context/OAuthSuccess";
 
 const ProtectedRoute = ({ element: Component }) => {
     const { isLoggedIn } = useAuth();
@@ -41,6 +42,8 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
+            {/* ... autres routes */}
+            <Route path="/oauth-success" element={<OAuthSuccess />} />
             <Route
               path="/profile"
               element={<ProtectedRoute element={Profile} />}

@@ -6,6 +6,7 @@ from app.user.user_service import add_user, hash_password, authenticate_user, ge
 # from app.profile.profile_service import upsert_profile, get_profile_by_user_id
 import logging
 import re
+from app.profile.picture_service import process_image, insert_picture, count_user_pictures
 
 router = APIRouter()
 
@@ -131,3 +132,138 @@ async def signup(request: Request, response: Response):
     return {
         "id": user["id"],
     }
+
+
+from app.tables.oauth import oauth
+from fastapi.responses import HTMLResponse
+import httpx
+from app.config import settings
+from datetime import datetime
+from app.utils.jwt_handler import verify_user_from_token
+from app.user.oauth_service import is_oauth_account_linked, link_oauth_account
+
+MAX_PICTURES = 5
+
+@router.get("/google/login")
+async def login_with_google(request: Request):
+    redirect_uri = f"{request.base_url}auth/google/callback?action=login"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@router.get("/google/signup")
+async def signup_with_google(request: Request):
+    redirect_uri = f"{request.base_url}auth/google/callback?action=signup"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request):
+    action = request.query_params.get("action")
+    token = await oauth.google.authorize_access_token(request)
+    user_info = await oauth.google.get("userinfo", token=token)
+    user_data = user_info.json()
+
+    google_id = user_data["id"]
+    email = user_data["email"]
+    first_name = user_data.get("given_name") or "Firstname"
+    last_name = user_data.get("name") or "Lastname"
+    # picture_url = user_data.get("picture", "")
+    username = f"google_{google_id[:8]}"
+
+    if action == "signup":
+        user = await handle_google_signup(email, first_name, last_name, username, google_id)
+
+    elif action == "login":
+        user = await handle_google_login(email)
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid or missing action parameter")
+
+    user_id = user["id"]
+
+    # # Récupérer et traiter la photo
+    # try:
+    #     if picture_url:
+    #         async with httpx.AsyncClient() as client:
+    #             response = await client.get(picture_url)
+    #             image_data = response.content
+
+    #         compressed_data = process_image(image_data)
+
+    #         if await count_user_pictures(user_id) < MAX_PICTURES:
+    #             await insert_picture(user_id, compressed_data)
+    # except Exception as e:
+    #     print(f"[Google] Échec récupération photo : {e}")
+
+    # Prépare la réponse HTML à injecter dans la popup
+    access_token, refresh_token = create_tokens(user_id)
+    response_html = f"""
+        <html>
+          <body>
+            <script>
+              window.opener.postMessage({{
+                type: "google-auth-success",
+                token: "{access_token}"
+              }}, "*");
+              window.close();
+            </script>
+          </body>
+        </html>
+    """
+
+    response = HTMLResponse(content=response_html)
+
+    access_token, refresh_token = create_tokens(user_id)
+    response.set_cookie(
+        key="access_token", 
+        value=access_token,
+        httponly=True,
+        secure=False,  # True en production
+        samesite="lax"
+    )
+    response.set_cookie(
+        key="refresh_token", 
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # True en production
+        samesite="lax"
+    )
+    # return response
+    return response
+
+async def handle_google_signup(email: str, first_name: str, last_name: str, username: str, google_id: str):
+    existing_user = await get_user_by_email(email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    if last_name == "Lastname":
+        last_name = first_name
+    if first_name:
+        username = first_name
+
+    await add_user(
+        email=email,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+        password_hash=None
+    )
+
+    user = await get_user_by_email(email)
+    await link_oauth_account(user["id"], google_id)
+
+    return user
+
+async def handle_google_login(email: str):
+    user = await get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    if not await is_oauth_account_linked(email):
+        raise HTTPException(status_code=403, detail="Google account not linked")
+    if not user["status"]:
+        await update_user_status(user["id"], True)
+    return user
+
+@router.get("/me")
+async def get_current_user(request: Request):
+    user = await verify_user_from_token(request)
+    return {"id": user["id"]}
