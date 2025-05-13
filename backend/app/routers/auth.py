@@ -3,10 +3,12 @@ from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Request, Response
 from app.utils.validators import validate_email, validate_password
 from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username
-# from app.profile.profile_service import upsert_profile, get_profile_by_user_id
 import logging
 import re
-from app.profile.picture_service import process_image, insert_picture, count_user_pictures
+from app.tables.oauth import oauth
+from fastapi.responses import HTMLResponse
+from app.utils.jwt_handler import verify_user_from_token
+from app.user.oauth_service import is_oauth_account_linked, link_oauth_account, handle_google_picture_upload
 
 router = APIRouter()
 
@@ -133,17 +135,6 @@ async def signup(request: Request, response: Response):
         "id": user["id"],
     }
 
-
-from app.tables.oauth import oauth
-from fastapi.responses import HTMLResponse
-import httpx
-from app.config import settings
-from datetime import datetime
-from app.utils.jwt_handler import verify_user_from_token
-from app.user.oauth_service import is_oauth_account_linked, link_oauth_account
-
-MAX_PICTURES = 5
-
 @router.get("/google/login")
 async def login_with_google(request: Request):
     redirect_uri = f"{request.base_url}auth/google/callback?action=login"
@@ -152,6 +143,11 @@ async def login_with_google(request: Request):
 @router.get("/google/signup")
 async def signup_with_google(request: Request):
     redirect_uri = f"{request.base_url}auth/google/callback?action=signup"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@router.get("/google/picture")
+async def login_with_google(request: Request):
+    redirect_uri = f"{request.base_url}auth/google/callback?action=picture"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -166,7 +162,7 @@ async def google_callback(request: Request):
     email = user_data["email"]
     first_name = user_data.get("given_name") or "Firstname"
     last_name = user_data.get("name") or "Lastname"
-    # picture_url = user_data.get("picture", "")
+    picture_url = user_data.get("picture", "")
     username = f"google_{google_id[:8]}"
 
     if action == "signup":
@@ -175,24 +171,13 @@ async def google_callback(request: Request):
     elif action == "login":
         user = await handle_google_login(email)
 
+    elif action == "picture":
+        return await handle_google_picture_upload(request, user_data)
+
     else:
         raise HTTPException(status_code=400, detail="Invalid or missing action parameter")
 
     user_id = user["id"]
-
-    # # Récupérer et traiter la photo
-    # try:
-    #     if picture_url:
-    #         async with httpx.AsyncClient() as client:
-    #             response = await client.get(picture_url)
-    #             image_data = response.content
-
-    #         compressed_data = process_image(image_data)
-
-    #         if await count_user_pictures(user_id) < MAX_PICTURES:
-    #             await insert_picture(user_id, compressed_data)
-    # except Exception as e:
-    #     print(f"[Google] Échec récupération photo : {e}")
 
     # Prépare la réponse HTML à injecter dans la popup
     access_token, refresh_token = create_tokens(user_id)
