@@ -132,7 +132,7 @@ def count_common_tags(user_tags, profile_tags):
     profile_set = set(tag.strip().lower() for tag in profile_tags.split(",")) if profile_tags else set()
     return len(user_set.intersection(profile_set))
 
-async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, profiles):
+async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, profiles, include_coords=False):
     """Ajoute distance, âge et nombre de tags communs à chaque profil."""
     profiles_with_details = []
     for profile in profiles:
@@ -146,7 +146,7 @@ async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, pr
         common_tags = count_common_tags(user_interests, profile["interests"])
         fame_rating = profile.get("fame_rating", 0)  # Si non défini, valeur par défaut 0
 
-        profiles_with_details.append({
+        enriched = {
             "id": profile["id"],
             "username": profile["username"],
             "distance_km": distance_km,
@@ -154,7 +154,14 @@ async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, pr
             "age": age,
             "common_tags": common_tags,
             "fame_rating": fame_rating  # Ajout du fame_rating pour le tri
-        })
+        }
+
+        if include_coords:
+            enriched["latitude"] = profile["latitude"]
+            enriched["longitude"] = profile["longitude"]
+
+        profiles_with_details.append(enriched)
+
     return profiles_with_details
 
 async def sort_profiles(profiles: list[dict]) -> list[dict]:
