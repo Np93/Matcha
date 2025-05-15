@@ -102,7 +102,7 @@ const Match = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 flex gap-6">
+    <div className="min-h-screen bg-gray-900 text-white p-4 flex gap-6">
       <Filters
         filters={filters}
         handleRangeChange={handleRangeChange}
