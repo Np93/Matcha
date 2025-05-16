@@ -8,6 +8,7 @@ import {
   HeartIcon,
   ChatBubbleLeftEllipsisIcon,
   Cog6ToothIcon,
+  Bars3Icon,
 } from "@heroicons/react/24/solid"; 
 
 const Navbar = () => {
@@ -15,6 +16,7 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const socket = useRef(null);
   const connectedUserId = useRef(null);
   const navigate = useNavigate();
@@ -118,16 +120,30 @@ const Navbar = () => {
     setIsSettingsDropdownOpen(!isSettingsDropdownOpen);
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
     <nav className="bg-black text-white fixed top-0 left-0 w-full h-16 flex justify-between items-center px-6 z-50">
       {/* Logo */}
       <h1 className="text-xl font-bold text-gray-400">Match</h1>
 
-      {/* Boutons dynamiques */}
-      <div className="flex items-center space-x-4">
+      {/* Mobile Menu Button */}
+      <div className="md:hidden">
+        <button 
+          onClick={toggleMobileMenu} 
+          className="text-white focus:outline-none"
+        >
+          <Bars3Icon className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex items-center space-x-4">
         {!isLoggedIn ? (
           <>
-            {/* Dropdown pour état déconnecté */}
+            {/* Dropdown for logged out state */}
             <div className="relative">
               <button
                 className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-md hover:bg-gray-800 focus:outline-none"
@@ -167,7 +183,7 @@ const Navbar = () => {
           </>
         ) : (
           <>
-            {/* Boutons pour état connecté */}
+            {/* Buttons for logged in state */}
             <button onClick={handleBellClick} className="relative p-2">
               <BellIcon className="w-6 h-6 text-white hover:text-gray-400" />
               {unreadCount > 0 && (
@@ -220,24 +236,173 @@ const Navbar = () => {
                       Location Settings
                     </Link>
                   </li>
-                  <li>
+                  <li className="border-b border-gray-500 border-opacity-30">
                     <Link to="/settings/account" className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white">
                       Account Settings
                     </Link>
+                  </li>
+                  <li>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left block px-4 py-2 text-red-400 hover:bg-gray-800 hover:text-red-300"
+                    >
+                      Logout
+                    </button>
                   </li>
                 </ul>
               )}
             </div>
 
+            {/* Standalone Logout Button */}
             <button
               onClick={handleLogout}
-              className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-md hover:bg-gray-800 focus:outline-none"
+              className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-md hover:bg-gray-800 hover:text-red-400 focus:outline-none"
             >
               Logout
             </button>
           </>
         )}
       </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 top-16 bg-black bg-opacity-95 z-40">
+          <div className="flex flex-col p-4">
+            {!isLoggedIn ? (
+              <>
+                <Link
+                  to="/login"
+                  className="block py-3 text-white border-b border-gray-800"
+                  onClick={toggleMobileMenu}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  className="block py-3 text-white border-b border-gray-800"
+                  onClick={toggleMobileMenu}
+                >
+                  Signup
+                </Link>
+                <Link
+                  to="/"
+                  className="block py-3 text-white border-b border-gray-800"
+                  onClick={toggleMobileMenu}
+                >
+                  Home
+                </Link>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between border-b border-gray-800 py-3">
+                  <Link
+                    to="/notification"
+                    className="text-white flex items-center space-x-2"
+                    onClick={() => {
+                      handleBellClick();
+                      toggleMobileMenu();
+                    }}
+                  >
+                    <BellIcon className="w-5 h-5" />
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                </div>
+                <Link
+                  to="/profile"
+                  className="flex items-center space-x-2 py-3 text-white border-b border-gray-800"
+                  onClick={toggleMobileMenu}
+                >
+                  <UserCircleIcon className="w-5 h-5" />
+                  <span>Profile</span>
+                </Link>
+                <Link
+                  to="/match"
+                  className="flex items-center space-x-2 py-3 text-white border-b border-gray-800"
+                  onClick={toggleMobileMenu}
+                >
+                  <HeartIcon className="w-5 h-5" />
+                  <span>Match</span>
+                </Link>
+                <Link
+                  to="/chat"
+                  className="flex items-center space-x-2 py-3 text-white border-b border-gray-800"
+                  onClick={toggleMobileMenu}
+                >
+                  <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
+                  <span>Chat</span>
+                </Link>
+                <div className="py-3 border-b border-gray-800">
+                  <div
+                    className="flex items-center space-x-2 text-white"
+                    onClick={() => {
+                      setIsSettingsDropdownOpen(!isSettingsDropdownOpen);
+                    }}
+                  >
+                    <Cog6ToothIcon className="w-5 h-5" />
+                    <span>Settings</span>
+                  </div>
+                  {isSettingsDropdownOpen && (
+                    <ul className="ml-6 mt-2">
+                      <li className="py-2">
+                        <Link
+                          to="/settings/profile"
+                          className="text-gray-300 hover:text-white"
+                          onClick={toggleMobileMenu}
+                        >
+                          Profile Settings
+                        </Link>
+                      </li>
+                      <li className="py-2">
+                        <Link
+                          to="/settings/pictures"
+                          className="text-gray-300 hover:text-white"
+                          onClick={toggleMobileMenu}
+                        >
+                          Profile Pictures
+                        </Link>
+                      </li>
+                      <li className="py-2">
+                        <Link
+                          to="/settings/location"
+                          className="text-gray-300 hover:text-white"
+                          onClick={toggleMobileMenu}
+                        >
+                          Location Settings
+                        </Link>
+                      </li>
+                      <li className="py-2">
+                        <Link
+                          to="/settings/account"
+                          className="text-gray-300 hover:text-white"
+                          onClick={toggleMobileMenu}
+                        >
+                          Account Settings
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </div>
+                <div className="py-4">
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      toggleMobileMenu();
+                    }}
+                    className="w-full py-3 border-2 border-red-500 text-red-500 rounded-md text-center hover:bg-gray-800 hover:text-red-400"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };
