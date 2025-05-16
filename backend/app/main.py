@@ -3,6 +3,7 @@ from app.routers import auth, profile, log, profiles_complete, chat, match, noti
 from app.config import settings
 from app.utils.database import create_tables
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from app.utils.scheduler import start_scheduler
 import sys
 import os
@@ -18,6 +19,8 @@ start_scheduler()
 @app.on_event("startup")
 async def startup_event():
     await create_tables()
+
+app.add_middleware(SessionMiddleware, secret_key=settings.api_secret)
 
 # Ajouter le middleware CORS
 app.add_middleware(

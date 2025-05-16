@@ -45,7 +45,7 @@ const Profile = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
+    <div className="min-h-screen bg-gray-900 text-white p-6">
       {/* Photo de profil */}
       <ProfilePictureDisplay
         pictures={profileData.profile_pictures}
@@ -58,6 +58,14 @@ const Profile = () => {
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <IdentificationIcon className="w-6 h-6 text-red-500" />
           <p><strong>Username:</strong> {profileData.username || "N/A"}</p>
+        </div>
+        <div className="flex items-center gap-4 border border-black shadow-lg rounded-md p-4">
+          <IdentificationIcon className="w-6 h-6 text-red-500" />
+          <p><strong>First Name:</strong> {profileData.first_name || "N/A"}</p>
+        </div>
+        <div className="flex items-center gap-4 border border-black shadow-lg rounded-md p-4">
+          <IdentificationIcon className="w-6 h-6 text-red-500" />
+          <p><strong>Last Name:</strong> {profileData.last_name || "N/A"}</p>
         </div>
         <div className="flex items-center gap-4 bg-transparent border border-black shadow-lg rounded-md p-4">
           <GlobeAltIcon className="w-6 h-6 text-red-500" />

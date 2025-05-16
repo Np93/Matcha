@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import imageCompression from "browser-image-compression";
 import { secureApiCall } from "../../../utils/api";
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const ProfilePicture = () => {
   const [pictures, setPictures] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -175,6 +177,37 @@ const ProfilePicture = () => {
           );
         })}
       </div>
+      <button
+        onClick={() => {
+            const width = 500;
+            const height = 600;
+            const left = window.innerWidth / 2 - width / 2;
+            const top = window.innerHeight / 2 - height / 2;
+
+            const popup = window.open(
+            `${API_URL}/auth/google/picture`,
+            "Google Picture Import",
+            `width=${width},height=${height},top=${top},left=${left}`
+            );
+
+            const listener = async (event) => {
+            if (event.data?.type === "google-picture-success") {
+                window.removeEventListener("message", listener);
+                await fetchPictures(); // recharge les photos automatiquement
+            }
+            };
+
+            window.addEventListener("message", listener);
+        }}
+        className="mt-4 w-full flex items-center justify-center gap-3 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition duration-200"
+        >
+        <img
+            src="https://cdn-icons-png.flaticon.com/512/281/281764.png"
+            alt="Google"
+            className="w-5 h-5"
+        />
+        <span className="font-medium">Import from Google</span>
+      </button>
 
       {/* Bouton suppression */}
       {selected.length > 0 && (

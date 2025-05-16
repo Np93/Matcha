@@ -128,3 +128,14 @@ async def get_all_inf_location_of_user(conn, user_id: int) -> dict | None:
         "country": row["country"],
         "locationMethod": row["location_method"],
     }
+
+async def is_map_enabled_for_user(conn, user_id: int) -> bool:
+    """Retourne True si l'utilisateur a activé l'affichage de la carte."""
+    query = text("""
+        SELECT map_enabled 
+        FROM locations 
+        WHERE user_id = :user_id
+    """)
+    result = await conn.execute(query, {"user_id": user_id})
+    row = result.fetchone()
+    return row and row.map_enabled
