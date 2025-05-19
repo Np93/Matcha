@@ -5,7 +5,7 @@ from app.chat.chat_service import create_conversation
 from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles, set_unlike_status, check_if_unliked
 from app.user.user_service import get_user_by_id
 from app.profile.block_service import are_users_blocked, async_generator_filter
-from app.profile.location_service import haversine, get_user_location
+from app.profile.location_service import haversine, get_user_location, is_map_enabled_for_user
 from app.routers.notifications import send_notification
 from app.profile.profile_service import get_profile_by_user_id, increment_fame_rating
 from app.profile.picture_service import get_main_picture_of_user
@@ -20,6 +20,7 @@ async def get_profiles(request: Request):
     user_id = user["id"]
 
     async with engine.begin() as conn:
+        map_enabled = await is_map_enabled_for_user(conn, user_id)
         # Récupérer localisation user (via `locations_service`)
         try:
             user_lat, user_lon = await get_user_location(conn, user_id)
@@ -42,7 +43,7 @@ async def get_profiles(request: Request):
 
         # Ajouter distance, âge et tags communs (via `match_service`)
         profiles_with_details = await enrich_profiles(
-            user_lat, user_lon, user_interests, liked_user_ids, profiles
+            user_lat, user_lon, user_interests, liked_user_ids, profiles, include_coords=map_enabled
         )
 
     async def is_not_blocked(profile):
@@ -59,11 +60,20 @@ async def get_profiles(request: Request):
         profile["main_picture"] = await get_main_picture_of_user(profile["id"])
 
     has_main_picture = bool(await get_main_picture_of_user(user_id))
-    return {
+    
+    result = {
         "can_like": has_main_picture,
-        "profiles": sorted_profiles
+        "profiles": sorted_profiles,
     }
 
+    if map_enabled:
+        result["user_location"] = {
+            "latitude": user_lat,
+            "longitude": user_lon
+        }
+
+    return result
+    
 @router.get("/filter_profiles")
 async def filter_profiles(request: Request):
     """Récupère les profils filtrés par âge, distance, célébrité et tags."""
@@ -84,6 +94,7 @@ async def filter_profiles(request: Request):
     user_id = user["id"]
 
     async with engine.begin() as conn:
+        map_enabled = await is_map_enabled_for_user(conn, user_id)
         # Récupérer localisation user (via `get_user_location`)
         try:
             user_lat, user_lon = await get_user_location(conn, user_id)
@@ -106,7 +117,7 @@ async def filter_profiles(request: Request):
 
         # Enrichir les profils avec distance, âge, tags (via `enrich_profiles`)
         enriched_profiles = await enrich_profiles(
-            user_lat, user_lon, user_interests, liked_user_ids, profiles
+            user_lat, user_lon, user_interests, liked_user_ids, profiles, include_coords=map_enabled
         )
 
         for profile in enriched_profiles:
@@ -133,10 +144,19 @@ async def filter_profiles(request: Request):
         profile["main_picture"] = await get_main_picture_of_user(profile["id"])
 
     has_main_picture = bool(await get_main_picture_of_user(user_id))
-    return {
+    
+    result = {
         "can_like": has_main_picture,
-        "profiles": not_blocked_profiles
+        "profiles": not_blocked_profiles,
     }
+
+    if map_enabled:
+        result["user_location"] = {
+            "latitude": user_lat,
+            "longitude": user_lon
+        }
+
+    return result
 
 @router.post("/like")
 async def like_profile(request: Request, data: dict):

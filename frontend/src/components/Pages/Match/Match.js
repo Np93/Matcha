@@ -6,9 +6,11 @@ import Filters from "./utils/Filters";
 import SortButtons from "./utils/SortButtons";
 import ProfileCard from "./utils/ProfileCard";
 import LikeButton from "../../../utils/LikeButton"; // Ajout du bouton Like
+import UserMap from "./utils/UserMap";
 
 const Match = () => {
   const [profiles, setProfiles] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
   const [filters, setFilters] = useState({
     minAge: 18,
     maxAge: 99,
@@ -29,6 +31,12 @@ const Match = () => {
         const response = await secureApiCall("/match/profiles", "GET");
         setCanLike(response.can_like);
         setProfiles(response.profiles);
+        if (response.user_location) {
+          setUserLocation([
+            response.user_location.latitude,
+            response.user_location.longitude,
+          ]);
+        }
       } catch (error) {
         console.error("Failed to fetch initial profiles:", error);
       }
@@ -42,6 +50,12 @@ const Match = () => {
       const response = await secureApiCall(`/match/filter_profiles?${queryParams}`, "GET");
       setCanLike(response.can_like);
       setProfiles(response.profiles);
+      if (response.user_location) {
+        setUserLocation([
+          response.user_location.latitude,
+          response.user_location.longitude,
+        ]);
+      }
     } catch (error) {
       console.error("Failed to fetch filtered profiles:", error);
     }
@@ -88,7 +102,7 @@ const Match = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 flex gap-6">
+    <div className="min-h-screen bg-gray-900 text-white p-4 flex gap-6">
       <Filters
         filters={filters}
         handleRangeChange={handleRangeChange}
@@ -118,6 +132,14 @@ const Match = () => {
             )}
           </div>
         </main>
+        {userLocation && (
+          <UserMap
+            currentUserPosition={userLocation}
+            users={sortedProfiles.filter(
+              (p) => p.latitude && p.longitude && p.main_picture
+            )}
+          />
+        )}
       </div>
     </div>
   );

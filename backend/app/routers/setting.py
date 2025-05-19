@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, UploadFile, File
-from PIL import Image
-from io import BytesIO
 from app.utils.jwt_handler import verify_user_from_token
 from app.utils.database import engine
 from app.profile.location_service import update_location, get_all_inf_location_of_user
 from app.profile.block_service import get_blocked_users, unblock_users
-from app.profile.picture_service import count_user_pictures, insert_picture, get_pictures_of_user, delete_user_pictures_by_ids, set_main_picture
+from app.profile.picture_service import count_user_pictures, insert_picture, get_pictures_of_user, delete_user_pictures_by_ids, set_main_picture, process_image
 
 router = APIRouter()
 MAX_PICTURES = 5
-MAX_DIMENSION = 500
 
 @router.get("/location")
 async def get_user_location_route(request: Request):
@@ -68,7 +65,6 @@ async def unblock_profiles(request: Request, data: dict):
     await unblock_users(user["id"], blocked_ids)
     return {"message": "Users unblocked successfully"}
 
-
 @router.post("/upload_picture")
 async def upload_profile_picture(request: Request, image: UploadFile = File(...)):
     user = await verify_user_from_token(request)
@@ -78,24 +74,8 @@ async def upload_profile_picture(request: Request, image: UploadFile = File(...)
     if count >= MAX_PICTURES:
         raise HTTPException(status_code=400, detail="Maximum number of pictures reached")
 
-    # Lire et convertir l'image
     content = await image.read()
-    img = Image.open(BytesIO(content)).convert("RGB")
-    
-    # Redimensionnement proportionnel avec plus grand côté = 500 px
-    original_width, original_height = img.size
-    max_side = max(original_width, original_height)
-    scale_factor = MAX_DIMENSION / max_side
-    new_width = int(original_width * scale_factor)
-    new_height = int(original_height * scale_factor)
-    
-    img = img.resize((new_width, new_height), Image.LANCZOS)
-
-    # Compression JPEG
-    output = BytesIO()
-    img.save(output, format="JPEG", quality=80)
-    compressed_data = output.getvalue()
-
+    compressed_data = process_image(content)
     await insert_picture(user_id, compressed_data)
 
     return {"message": "Image uploaded successfully"}

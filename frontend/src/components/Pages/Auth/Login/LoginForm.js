@@ -5,6 +5,8 @@ import { apiCall } from "../../../../utils/api";
 import { useAuth } from "../../../../context/AuthContext";
 import backgroundImage from "../../../../assets/images/background_login.jpg";
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const LoginForm = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -24,6 +26,35 @@ const LoginForm = () => {
     } catch (error) {
       alert(error.message);
     }
+  };
+
+  const googleLogin = () => {
+    const width = 500;
+    const height = 600;
+    const left = window.innerWidth / 2 - width / 2;
+    const top = window.innerHeight / 2 - height / 2;
+
+    const popup = window.open(
+      `${API_URL}/auth/google/login`,
+      "Google Login",
+      `width=${width},height=${height},top=${top},left=${left}`
+    );
+
+    const messageListener = async (event) => {
+      if (event.data?.type === "google-auth-success") {
+        window.removeEventListener("message", messageListener);
+        try {
+          const response = await apiCall("/auth/me", "GET");
+          updateAuthContext(response);
+          navigate("/profile");
+        } catch (error) {
+          console.error("OAuth error:", error);
+          alert("Google login failed.");
+        }
+      }
+    };
+
+    window.addEventListener("message", messageListener);
   };
 
   return (
@@ -72,6 +103,23 @@ const LoginForm = () => {
             Sign Up
           </button>
         </p>
+        <div className="flex items-center my-6">
+          <div className="flex-grow h-px bg-gray-600"></div>
+          <span className="mx-4 text-gray-400 text-sm">or</span>
+          <div className="flex-grow h-px bg-gray-600"></div>
+        </div>
+
+        <button
+          onClick={googleLogin}
+          className="w-full flex items-center justify-center gap-3 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition duration-200"
+        >
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/281/281764.png"
+            alt="Google"
+            className="w-5 h-5"
+          />
+          <span className="font-medium">Sign up with Google</span>
+        </button>
       </div>
     </div>
   );

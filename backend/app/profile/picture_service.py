@@ -1,6 +1,10 @@
 from app.utils.database import engine
 from sqlalchemy.sql import text
 import base64
+from PIL import Image
+from io import BytesIO
+
+MAX_DIMENSION = 500
 
 async def get_pictures_of_user(user_id: int):
     """
@@ -126,3 +130,19 @@ async def get_main_picture_of_user(user_id: int) -> str | None:
     if row:
         return base64.b64encode(row[0]).decode("utf-8")
     return None
+
+def process_image(image_bytes: bytes) -> bytes:
+    img = Image.open(BytesIO(image_bytes)).convert("RGB")
+
+    # Redimensionnement proportionnel
+    original_width, original_height = img.size
+    max_side = max(original_width, original_height)
+    scale_factor = MAX_DIMENSION / max_side
+    new_width = int(original_width * scale_factor)
+    new_height = int(original_height * scale_factor)
+    img = img.resize((new_width, new_height), Image.LANCZOS)
+
+    # Compression JPEG
+    output = BytesIO()
+    img.save(output, format="JPEG", quality=80)
+    return output.getvalue()
