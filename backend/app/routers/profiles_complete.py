@@ -52,4 +52,7 @@ async def complete_profile(request: Request):
             mapEnabled=location.get("mapEnabled"),  # Par défaut False si absent
         )
 
-    return {"id": user_id["id"]}
+    return {
+        "id": user_id["id"],
+        "message": "Profile completed successfully"
+    }
