@@ -109,12 +109,12 @@ const CompleteProfile = () => {
               <option value="female" className="text-black">
                 Female
               </option>
-              <option value="non-binary" className="text-black">
+              {/* <option value="non-binary" className="text-black">
                 Non-binary
               </option>
               <option value="other" className="text-black">
                 Other
-              </option>
+              </option> */}
             </select>
           </div>
 
@@ -141,9 +141,9 @@ const CompleteProfile = () => {
               <option value="bisexual" className="text-black">
                 Bisexual
               </option>
-              <option value="other" className="text-black">
+              {/* <option value="other" className="text-black">
                 Other
-              </option>
+              </option> */}
             </select>
           </div>
 

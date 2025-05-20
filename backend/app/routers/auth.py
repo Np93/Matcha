@@ -2,7 +2,7 @@ from app.utils.jwt_handler import create_tokens
 from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Request, Response
 from app.utils.validators import validate_email, validate_password
-from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username
+from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username
 import logging
 import re
 from app.tables.oauth import oauth
@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 async def login(request: Request, response: Response):
     # print("DEBUG: Received login request")  # Début de la requête
     body = await request.json()
-    email = body.get("email")
+    username = body.get("username")
     password = body.get("password")
 
     # print(f"DEBUG: Received email: {email}")  # Log de l'email reçu
     # print("DEBUG: Validating email and password format...")  # Étape de validation
 
     # Validation stricte des données
-    if not email or not validate_email(email):
-        print("ERROR: Invalid email format")  # Email invalide
-        raise HTTPException(status_code=400, detail="Invalid email format")
+    if not username or not re.match(r"^[a-zA-Z0-9_.-]+$", username):
+        print("ERROR: Invalid username format")  # Username invalide
+        raise HTTPException(status_code=400, detail="Invalid username format")
     if not password or not validate_password(password):
         print("ERROR: Password does not meet security requirements")  # Password invalide
         raise HTTPException(status_code=400, detail="Password does not meet security requirements")
@@ -36,13 +36,13 @@ async def login(request: Request, response: Response):
     # print("DEBUG: Validations passed. Authenticating user in the database...")  # Authentification
 
     # Authentifier l'utilisateur via la base de données
-    auth_user = await authenticate_user(email, password)
+    auth_user = await authenticate_user_by_username(username, password)
     if not auth_user:
         # print("ERROR: Invalid credentials")  # Erreur d'authentification
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    print(f"DEBUG: User {email} authenticated successfully. Generating JWT token...")  # Authentification réussie
-    user = await get_user_by_email(email)
+    # print(f"DEBUG: User {email} authenticated successfully. Generating JWT token...")  # Authentification réussie
+    user = await get_user_by_username(username)
     print(user)
     # Vérifier si l'utilisateur est déjà connecté
     if user["status"]:  # Vérifie si le statut est déjà `True`
@@ -70,7 +70,7 @@ async def login(request: Request, response: Response):
         samesite="lax" # "Strict"
     )
 
-    print(f"DEBUG: Token generated and set in cookie for user: {email}")  # Log du token généré
+    # print(f"DEBUG: Token generated and set in cookie for user: {email}")  # Log du token généré
 
     return {
         "id": user["id"],
@@ -215,6 +215,14 @@ async def google_callback(request: Request):
     # return response
     return response
 
+async def generate_unique_username(base_username: str) -> str:
+    username = base_username
+    suffix = 1
+    while await get_user_by_username(username):
+        username = f"{base_username}{suffix}"
+        suffix += 1
+    return username
+
 async def handle_google_signup(email: str, first_name: str, last_name: str, username: str, google_id: str):
     existing_user = await get_user_by_email(email)
     if existing_user:
@@ -225,9 +233,13 @@ async def handle_google_signup(email: str, first_name: str, last_name: str, user
     if first_name:
         username = first_name
 
+    base_username = re.sub(r"[^a-zA-Z0-9_.-]", "", first_name or "user")
+
+    unique_username = await generate_unique_username(base_username)
+
     await add_user(
         email=email,
-        username=username,
+        username=unique_username,
         first_name=first_name,
         last_name=last_name,
         password_hash=None
