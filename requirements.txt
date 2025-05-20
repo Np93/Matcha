@@ -13,3 +13,4 @@ Pillow
 authlib
 httpx
 itsdangerous
+authlib

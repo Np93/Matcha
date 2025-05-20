@@ -33,10 +33,19 @@ async def refresh_token(request: Request, response: Response):
 async def get_status(request: Request):
     print("status")
     user = await verify_user_from_token(request)  # Vérifie l'access token
+    
+    # Check if profile exists
+    has_profile = True
+    try:
+        from app.profile.profile_service import get_profile_by_user_id
+        await get_profile_by_user_id(user["id"])
+    except HTTPException:
+        has_profile = False
 
-    # Retourner les informations utilisateur
+    # Return user information with profile status
     return {
         "id": user["id"],
+        "has_profile": has_profile
     }
 
 @router.post("/logout")
