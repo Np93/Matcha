@@ -22,11 +22,14 @@ async def get_profile(request: Request):
     user = await verify_user_from_token(request)  # Vérifie l'access token
 
     # Récupérer uniquement les informations de profil
-    profile_data = await get_profile_by_user_id(user["id"])
-    print("ceci est les information dans profile_data dans la route: ", profile_data)
-    if not profile_data:
-        raise HTTPException(status_code=401, detail="Profile not found")
-
+    try:
+        profile_data = await get_profile_by_user_id(user["id"])
+        print("ceci est les information dans profile_data dans la route: ", profile_data)
+    except HTTPException:
+        # This returns a JSON response with the user ID so the frontend knows who is logged in
+        # but needs to complete their profile
+        raise HTTPException(status_code=404, detail="Profile incomplete, please complete your profile")
+        
     # Récupération des images via le service
     profile_pictures = await get_pictures_of_user(user["id"])
 

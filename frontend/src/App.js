@@ -18,18 +18,24 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 // import OAuthSuccess from "./context/OAuthSuccess";
 
 const ProtectedRoute = ({ element: Component }) => {
-    const { isLoggedIn } = useAuth();
+    const { isLoggedIn, hasProfile } = useAuth();
     const location = useLocation();
+    const currentPath = location.pathname;
   
     if (isLoggedIn === null) {
       return <div>Loading...</div>; // Montre un écran de chargement pendant la vérification
     }
-  
-    return isLoggedIn ? (
-      <Component />
-    ) : (
-      <Navigate to="/login" state={{ from: location }} />
-    );
+    
+    if (!isLoggedIn) {
+      return <Navigate to="/login" state={{ from: location }} />;
+    }
+    
+    // If profile is not complete and user is trying to access a page other than complete-profile
+    if (hasProfile === false && currentPath !== "/complete-profile") {
+      return <Navigate to="/complete-profile" />;
+    }
+    
+    return <Component />;
   };
 
 const App = () => {

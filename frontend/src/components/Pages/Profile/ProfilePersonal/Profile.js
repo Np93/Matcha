@@ -23,11 +23,21 @@ const Profile = () => {
       try {
         const response = await secureApiCall("/profile/");
         setProfileData(response);
-        updateAuthContext(response);
+        updateAuthContext({...response, has_profile: true});
       } catch (error) {
         console.error("Failed to fetch profile data:", error);
-        logout();
-        navigate("/");
+        
+        // If error is 401 (not authorized) or 404 (not found), profile may not exist
+        if (error.status === 401 || error.status === 404) {
+          console.log("Profile not found, redirecting to complete-profile");
+          // Update auth context to indicate profile is not complete
+          updateAuthContext({id: error.userId, has_profile: false});
+          navigate("/complete-profile");
+        } else {
+          // For other errors, just logout and go to home
+          logout();
+          navigate("/");
+        }
       }
     };
 

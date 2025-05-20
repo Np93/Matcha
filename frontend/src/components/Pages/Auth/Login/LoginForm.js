@@ -22,12 +22,24 @@ const LoginForm = () => {
     }
 
     try {
-      const response = await apiCall("/auth/login", "POST", {
-        username,
-        password,
-      });
-      updateAuthContext(response);
-      navigate("/profile");
+        const response = await apiCall("/auth/login", "POST", {
+          username,
+          password,
+        });
+      console.log(response);
+      
+      // Get user status to check if profile is complete
+      const userStatus = await apiCall("/log/status", "GET");
+      
+      // Update auth context with response and profile status
+      updateAuthContext({...response, has_profile: userStatus.has_profile});
+      
+      // Redirect to the appropriate page based on profile status
+      if (userStatus.has_profile) {
+        navigate("/profile");
+      } else {
+        navigate("/complete-profile");
+      }
     } catch (error) {
       alert(error.message);
     }
@@ -50,8 +62,18 @@ const LoginForm = () => {
         window.removeEventListener("message", messageListener);
         try {
           const response = await apiCall("/auth/me", "GET");
-          updateAuthContext(response);
-          navigate("/profile");
+          // Get user status to check if profile is complete
+          const userStatus = await apiCall("/log/status", "GET");
+          
+          // Update auth context with response and profile status
+          updateAuthContext({...response, has_profile: userStatus.has_profile});
+          
+          // Redirect to the appropriate page based on profile status
+          if (userStatus.has_profile) {
+            navigate("/profile");
+          } else {
+            navigate("/complete-profile");
+          }
         } catch (error) {
           console.error("OAuth error:", error);
           alert("Google login failed.");

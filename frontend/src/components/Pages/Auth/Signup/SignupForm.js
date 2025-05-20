@@ -57,7 +57,8 @@ const SignupForm = () => {
         window.removeEventListener("message", messageListener);
         try {
           const response = await apiCall("/auth/me", "GET");
-          updateAuthContext(response);
+          // Always set has_profile to false for new sign ups
+          updateAuthContext({...response, has_profile: false});
           navigate("/complete-profile");
         } catch (error) {
           console.error("OAuth error:", error);

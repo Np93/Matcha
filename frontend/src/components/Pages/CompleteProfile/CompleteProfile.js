@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { secureApiCall } from "../../../utils/api";
 import DatePicker from "react-datepicker";
 import { getUserLocation } from "../../../utils/getLocation";
+import { useAuth } from "../../../context/AuthContext";
 import "react-datepicker/dist/react-datepicker.css";
 
 const predefinedInterests = [
@@ -19,6 +20,7 @@ const CompleteProfile = () => {
   const [birthday, setBirthday] = useState(null); // Stocke la date d'anniversaire
   const [location, setLocation] = useState(null);
   const navigate = useNavigate();
+  const { updateAuthContext } = useAuth();
 
     // Récupération de la localisation au chargement du composant
     useEffect(() => {
@@ -66,7 +68,10 @@ const CompleteProfile = () => {
         location: location ? { ...location } : null,
       });
 
-      alert(response.message);
+      // Update auth context to indicate the profile is now complete
+      updateAuthContext({ id: response.id, has_profile: true });
+      
+      alert("Profile completed successfully!");
       navigate("/profile"); // Redirige vers la page profil
     } catch (error) {
       console.error("Failed to complete profile:", error);
