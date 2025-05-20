@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import { login } from "../utils/api";
 import { apiCall } from "../../../../utils/api";
 import { useAuth } from "../../../../context/AuthContext";
 import backgroundImage from "../../../../assets/images/background_login.jpg";
@@ -8,20 +7,26 @@ import backgroundImage from "../../../../assets/images/background_login.jpg";
 const API_URL = process.env.REACT_APP_API_URL;
 
 const LoginForm = () => {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const { updateAuthContext } = useAuth(); // Récupère la fonction de connexion depuis le contexte
-    const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const { updateAuthContext } = useAuth();
+  const navigate = useNavigate();
+
+  const validateUsername = (value) => /^[a-zA-Z0-9_.-]+$/.test(value);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateUsername(username)) {
+      alert("Invalid username. Only letters, numbers, _, ., and - are allowed.");
+      return;
+    }
+
     try {
-        const response = await apiCall("/auth/login", "POST", {
-          email,
-          password,
-        });
-      console.log(response)
-      updateAuthContext(response); // Met à jour l'état global avec l'ID utilisateur
+      const response = await apiCall("/auth/login", "POST", {
+        username,
+        password,
+      });
+      updateAuthContext(response);
       navigate("/profile");
     } catch (error) {
       alert(error.message);
@@ -68,13 +73,14 @@ const LoginForm = () => {
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           <div>
-            <label className="block text-gray-300 mb-1 sm:mb-2">Email:</label>
+            <label className="block text-gray-300 mb-1 sm:mb-2">Username:</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               className="w-full px-3 sm:px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="Enter your username"
             />
           </div>
           <div>
@@ -85,6 +91,7 @@ const LoginForm = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full px-3 sm:px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="Enter your password"
             />
           </div>
           <button
@@ -118,7 +125,7 @@ const LoginForm = () => {
             alt="Google"
             className="w-5 h-5"
           />
-          <span className="font-medium">Sign up with Google</span>
+          <span className="font-medium">Sign in with Google</span>
         </button>
       </div>
     </div>
