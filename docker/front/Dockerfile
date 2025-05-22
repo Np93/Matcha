@@ -20,11 +20,16 @@ WORKDIR /app
 # Copier uniquement package.json pour installer les dépendances
 COPY ./frontend/package.json ./frontend/package-lock.json ./
 
-# Installer les dépendances
-RUN npm install
+# Créer le dossier .cache avec les bonnes permissions et installer les dépendances
+RUN mkdir -p /app/node_modules/.cache && \
+    chmod -R 777 /app/node_modules/.cache && \
+    npm install
 
 # Copier tout le code source du frontend
 COPY ./frontend /app
+
+# Définir les bonnes permissions pour le dossier node_modules
+RUN chown -R node:node /app/node_modules
 
 # Exposer le port 3000
 EXPOSE 3000
