@@ -26,7 +26,7 @@ const CompleteProfile = () => {
     useEffect(() => {
       getUserLocation()
         .then(setLocation)
-        .catch((err) => console.error("Erreur localisation:", err));
+        .catch((err) => console.log("Erreur localisation:", err));
     }, []);
 
     // Gérer la sélection/désélection d'un intérêt
@@ -74,7 +74,7 @@ const CompleteProfile = () => {
       alert("Profile completed successfully!");
       navigate("/profile"); // Redirige vers la page profil
     } catch (error) {
-      console.error("Failed to complete profile:", error);
+      console.log("Failed to complete profile:", error);
       alert(error.message);
     }
   };

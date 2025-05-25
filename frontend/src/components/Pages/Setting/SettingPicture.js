@@ -18,7 +18,7 @@ const ProfilePicture = () => {
       const response = await secureApiCall("/setting/get_pictures", "GET");
       setPictures(response); // response = [{id, image_data}]
     } catch (err) {
-      console.error("Erreur lors du chargement des photos :", err);
+      console.log("Erreur lors du chargement des photos :", err);
       setError("Failed to load pictures.");
     }
   };
@@ -51,7 +51,7 @@ const ProfilePicture = () => {
       setError(null);
       fetchPictures(); // refresh
     } catch (err) {
-      console.error("Erreur upload :", err);
+      console.log("Erreur upload :", err);
       setError("Upload failed or maximum number of pictures reached.");
     }
   };
@@ -74,7 +74,7 @@ const ProfilePicture = () => {
       setSelected([]);
       fetchPictures();
     } catch (err) {
-      console.error("Erreur suppression :", err);
+      console.log("Erreur suppression :", err);
       setError("Failed to delete pictures.");
     }
   };
@@ -85,7 +85,7 @@ const ProfilePicture = () => {
       setError(null);
       fetchPictures(); // Refresh pour mettre à jour le drapeau
     } catch (err) {
-      console.error("Erreur set main :", err);
+      console.log("Erreur set main :", err);
       setError("Failed to set main picture.");
     }
   };

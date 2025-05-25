@@ -60,7 +60,7 @@ const SettingProfil = () => {
           interests: Array.isArray(profileResponse.interests) ? profileResponse.interests : []
         });
       } catch (error) {
-        console.error("Failed to fetch user data:", error);
+        console.log("Failed to fetch user data:", error);
       } finally {
         setLoading(false);
       }
@@ -81,7 +81,7 @@ const SettingProfil = () => {
       setBlockedUsers((prev) => prev.filter((user) => !selectedIds.includes(user.id)));
       setSelectedIds([]);
     } catch (error) {
-      console.error("Unblock failed:", error);
+      console.log("Unblock failed:", error);
     }
   };
 
@@ -135,7 +135,7 @@ const SettingProfil = () => {
       
       alert("Profile updated successfully!");
     } catch (error) {
-      console.error("Failed to update profile:", error);
+      console.log("Failed to update profile:", error);
       alert(error.message || "Failed to update profile.");
     }
   };

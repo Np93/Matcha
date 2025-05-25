@@ -80,7 +80,7 @@ const LocationSettings = () => {
         setCitySuggestions([]);
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération des suggestions de ville:", error);
+      console.log("Erreur lors de la récupération des suggestions de ville:", error);
       setCitySuggestions([]);
     }
   };
@@ -103,7 +103,7 @@ const LocationSettings = () => {
         };
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération des coordonnées :", error);
+      console.log("Erreur lors de la récupération des coordonnées :", error);
     }
 
     return { latitude: null, longitude: null };
@@ -127,7 +127,7 @@ const LocationSettings = () => {
       setCitySuggestions([]);
       setMapEnabled(false);
     } catch (error) {
-      console.error("Erreur lors de la sélection de la ville :", error);
+      console.log("Erreur lors de la sélection de la ville :", error);
     }
   };
 
