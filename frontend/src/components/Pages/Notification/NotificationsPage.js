@@ -20,7 +20,7 @@ const NotificationsPage = () => {
           });
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération des notifications :", error);
+        console.log("Erreur lors de la récupération des notifications :", error);
       }
     };
 

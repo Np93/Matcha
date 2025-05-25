@@ -15,7 +15,7 @@ const LikeButton = ({ userId, targetId, isLiked, onLike, disabled }) => {
       setLiked(true);
       onLike(); // Permet de mettre à jour le parent
     } catch (error) {
-      console.error("Like failed:", error);
+      console.log("Like failed:", error);
     }
   };
 

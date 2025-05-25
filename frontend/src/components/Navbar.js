@@ -58,7 +58,7 @@ const Navbar = () => {
     };
   
     newSocket.onerror = (error) => {
-      console.error("❌ Erreur WebSocket :", error);
+      console.log("❌ Erreur WebSocket :", error);
     };
   
     newSocket.onclose = (event) => {
@@ -88,7 +88,7 @@ const Navbar = () => {
         const response = await secureApiCall("/notifications/notifications");
         setUnreadCount(response.filter((n) => !n.is_read).length);
       } catch (error) {
-        console.error("Erreur lors de la récupération des notifications :", error);
+        console.log("Erreur lors de la récupération des notifications :", error);
       }
     };
     fetchUnreadCount();
@@ -108,7 +108,7 @@ const Navbar = () => {
       logout();
       navigate("/");
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.log("Logout failed:", error);
     }
   };
 

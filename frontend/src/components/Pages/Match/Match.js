@@ -38,7 +38,7 @@ const Match = () => {
           ]);
         }
       } catch (error) {
-        console.error("Failed to fetch initial profiles:", error);
+        console.log("Failed to fetch initial profiles:", error);
       }
     };
     fetchInitialProfiles();
@@ -57,7 +57,7 @@ const Match = () => {
         ]);
       }
     } catch (error) {
-      console.error("Failed to fetch filtered profiles:", error);
+      console.log("Failed to fetch filtered profiles:", error);
     }
   };
 

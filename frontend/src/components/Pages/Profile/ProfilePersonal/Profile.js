@@ -25,7 +25,7 @@ const Profile = () => {
         setProfileData(response);
         updateAuthContext({...response, has_profile: true});
       } catch (error) {
-        console.error("Failed to fetch profile data:", error);
+        console.log("Failed to fetch profile data:", error);
         
         // If error is 401 (not authorized) or 404 (not found), profile may not exist
         if (error.status === 401 || error.status === 404) {
