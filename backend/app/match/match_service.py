@@ -118,7 +118,16 @@ def get_orientation_filter(user_gender, user_pref):
     elif user_pref == "homosexual":
         return f"profiles.gender = '{user_gender}' AND profiles.sexual_preferences IN ('homosexual', 'bisexual')"
     elif user_pref == "bisexual":
-        return "profiles.sexual_preferences IN ('homosexual', 'heterosexual', 'bisexual')"
+        opposite_gender = "male" if user_gender == "female" else "female"
+        return (
+            f"(profiles.gender = '{user_gender}' AND profiles.sexual_preferences IN ('homosexual', 'bisexual'))"
+            f" OR (profiles.gender = '{opposite_gender}' AND profiles.sexual_preferences IN ('heterosexual', 'bisexual'))"
+        )
+    # elif user_pref == "other":
+    #     return (
+    #         "profiles.gender IN ('non-binary', 'other') "
+    #         "AND profiles.sexual_preferences = 'other'"
+    #     )
     return "TRUE"
 
 def calculate_age(birthday):
