@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import { login } from "../utils/api";
 import { apiCall } from "../../../../utils/api";
 import { useAuth } from "../../../../context/AuthContext";
 import backgroundImage from "../../../../assets/images/background_login.jpg";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = "/api";
 
 const LoginForm = () => {
     const [email, setEmail] = useState("");

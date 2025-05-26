@@ -44,7 +44,7 @@ const Navbar = () => {
     }
   
     // Création d'une nouvelle socket
-    const newSocket = new WebSocket(`ws://localhost:8000/notifications/ws/notifications`);
+    const newSocket = new WebSocket(`ws://${window.location.host}/notifications/ws/notifications`);
     socket.current = newSocket;
     connectedUserId.current = userId;
   

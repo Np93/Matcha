@@ -2,12 +2,13 @@
 DC = docker-compose
 
 # Règles
-.PHONY: all build up clean fclean ps re help
+.PHONY: all build up clean fclean ps re help dev prod
 
 # Règle par défaut
-all: ## Construire et démarrer les conteneurs avec sudo
-	$(DC) up --build
-	@echo "Containers started with sudo."
+# all: ## Construire et démarrer les conteneurs avec sudo
+# 	$(DC) up --build
+# 	@echo "Containers started with sudo."
+all: dev ## Par défaut, lancer le projet en mode développement
 
 # Construire les services Docker
 build: ## Construire les images Docker pour tous les services
@@ -19,6 +20,14 @@ up: ## Démarrer tous les services en arrière-plan
 	$(DC) up
 	@echo "Containers are up."
 
+dev: ## Lancer tous les services avec React en mode dev (npm start)
+	$(DC) -f docker-compose.yml --profile dev up --build
+	@echo "Dev environment started on port 3000."
+
+prod: ## Lancer tous les services avec React buildé + Nginx
+	$(DC) -f docker-compose.yml --profile prod up --build
+	@echo "Production environment started on port 80."
+
 # Supprimer les conteneurs mais conserver les volumes
 clean: ## Arrêter et supprimer les conteneurs, tout en conservant les volumes
 	$(DC) down --volumes
@@ -26,7 +35,7 @@ clean: ## Arrêter et supprimer les conteneurs, tout en conservant les volumes
 
 # Supprimer les conteneurs, les volumes et les images associées
 fclean: ## Supprimer les conteneurs, les volumes et les images Docker
-	$(DC) down --rmi all --volumes --remove-orphans
+	$(DC) --profile dev --profile prod down --rmi all --volumes --remove-orphans
 	docker system prune -f
 	@echo "Cleaned all containers, volumes, and images."
 

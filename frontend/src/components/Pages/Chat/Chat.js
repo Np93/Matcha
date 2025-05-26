@@ -26,7 +26,7 @@ const Chat = () => {
       socket.current.close();
     }
 
-    socket.current = new WebSocket(`ws://localhost:8000/chat/ws/${chatId}`);
+    socket.current = new WebSocket(`ws://${window.location.host}/chat/ws/${chatId}`);
 
     socket.current.onopen = () => {
       console.log("WebSocket connecté");

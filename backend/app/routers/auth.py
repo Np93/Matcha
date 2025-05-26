@@ -5,6 +5,7 @@ from app.utils.validators import validate_email, validate_password
 from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username
 import logging
 import re
+from app.config import settings
 from app.tables.oauth import oauth
 from fastapi.responses import HTMLResponse
 from app.utils.jwt_handler import verify_user_from_token
@@ -137,17 +138,20 @@ async def signup(request: Request, response: Response):
 
 @router.get("/google/login")
 async def login_with_google(request: Request):
-    redirect_uri = f"{request.base_url}auth/google/callback?action=login"
+    origin = settings.frontend_origin
+    redirect_uri = f"{origin}/auth/google/callback?action=login"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @router.get("/google/signup")
 async def signup_with_google(request: Request):
-    redirect_uri = f"{request.base_url}auth/google/callback?action=signup"
+    origin = settings.frontend_origin
+    redirect_uri = f"{origin}/auth/google/callback?action=signup"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @router.get("/google/picture")
 async def login_with_google(request: Request):
-    redirect_uri = f"{request.base_url}auth/google/callback?action=picture"
+    origin = settings.frontend_origin
+    redirect_uri = f"{origin}auth/google/callback?action=picture"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -185,11 +189,11 @@ async def google_callback(request: Request):
         <html>
           <body>
             <script>
-              window.opener.postMessage({{
-                type: "google-auth-success",
-                token: "{access_token}"
-              }}, "*");
-              window.close();
+                window.opener.postMessage({{
+                    type: "google-auth-success",
+                    token: "{access_token}"
+                }}, "*");
+                window.close();
             </script>
           </body>
         </html>

@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     google_api_base: str
     google_scope: str
 
-    frontend_url: str
+    # frontend_url: str
+    frontend_origin: str
 
     class Config:
         env_file = ".env"

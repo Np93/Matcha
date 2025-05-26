@@ -4,7 +4,7 @@ import { apiCall } from "../../../../utils/api";
 import { useAuth } from "../../../../context/AuthContext";
 import backgroundImage from "../../../../assets/images/background_signup.jpg";
 
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = "/api";
 
 const SignupForm = () => {
   const [email, setEmail] = useState("");

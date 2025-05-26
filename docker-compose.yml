@@ -6,13 +6,14 @@ services:
       context: .
       dockerfile: docker/back/Dockerfile
     container_name: backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: /wait-for-it.sh uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
     env_file:
       - .env
+    restart: always
     depends_on:
       - db
 
@@ -20,13 +21,50 @@ services:
     build:
       context: .
       dockerfile: docker/front/Dockerfile
+      target: dev
     container_name: frontend
-    ports:
-      - "3000:3000"
     volumes:
       - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
+    restart: always
+    depends_on:
+      - backend
+    profiles:
+      - dev
+
+  frontend_prod:
+    build:
+      context: .
+      dockerfile: docker/front/Dockerfile
+      target: prod
+    container_name: frontend
+    ports:
+      - "80:80"
+      - "3000:3000"  # exposé uniquement si nécessaire pour test
     environment:
       - REACT_APP_API_URL=${REACT_APP_API_URL}
+    depends_on:
+      - backend
+    profiles:
+      - prod
+
+  nginx_dev:
+    image: nginx:stable-alpine
+    container_name: nginx_dev
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/front/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    profiles:
+      - dev
 
   db:
     image: postgres:14
