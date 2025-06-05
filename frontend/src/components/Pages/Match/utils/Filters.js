@@ -3,8 +3,7 @@ import DualSlider from "./DualSlider";
 
 const Filters = ({ filters, handleRangeChange, toggleTags, fetchProfilesWithFilters }) => {
   return (
-    <aside className="w-1/4 bg-gray-800 p-4 rounded-lg shadow-lg border-2 border-red-500 
-    space-y-4 max-h-fit">
+    <div className="w-full space-y-4">
       <h2 className="text-lg md:text-2xl font-bold text-red-500 text-center">Filters</h2>
 
       {/* Age Slider */}
@@ -79,7 +78,7 @@ const Filters = ({ filters, handleRangeChange, toggleTags, fetchProfilesWithFilt
       >
         Search Profiles
       </button>
-    </aside>
+    </div>
   );
 };
 

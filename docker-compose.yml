@@ -58,11 +58,24 @@ services:
     container_name: nginx_dev
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./docker/front/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl
     depends_on:
       - frontend
       - backend
+      - certgen
+    profiles:
+      - dev
+
+  certgen:
+    image: alpine:latest
+    container_name: certgen
+    volumes:
+      - ./docker/ssl:/certs
+      - ./docker/certgen/entrypoint.sh:/entrypoint.sh
+    entrypoint: /entrypoint.sh
     profiles:
       - dev
 

@@ -60,14 +60,14 @@ async def login(request: Request, response: Response):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False, # True
+        secure=True, # True
         samesite="lax" # "Strict"
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False, # True
+        secure=True, # True
         samesite="lax" # "Strict"
     )
 
@@ -121,14 +121,14 @@ async def signup(request: Request, response: Response):
         key="access_token", 
         value=access_token, 
         httponly=True,
-        secure=False, # True
+        secure=True, # True
         samesite="lax" # "Strict"
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False, # True
+        secure=True, # True
         samesite="lax" # "Strict"
     )
 

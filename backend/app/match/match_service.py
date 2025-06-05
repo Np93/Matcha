@@ -109,16 +109,32 @@ async def get_matching_profiles(conn, user_id, gender, preferences):
     result = await conn.execute(query, {"user_id": user_id})
     return result.mappings().all()
 
-def get_orientation_filter(user_gender, user_pref):
-    """Retourne la clause SQL selon le genre et la préférence sexuelle."""
+def get_orientation_filter(user_gender: str, user_pref: str) -> str:
+    """
+    Retourne une clause SQL pour filtrer les profils en fonction
+    du genre et des préférences sexuelles du user.
+    """
     if user_pref == "heterosexual":
-        return ("profiles.gender = 'female' AND profiles.sexual_preferences IN ('heterosexual', 'bisexual')"
-                if user_gender == "male"
-                else "profiles.gender = 'male' AND profiles.sexual_preferences IN ('heterosexual', 'bisexual')")
+        # Cherche uniquement le sexe opposé, qui soit hétéro ou bi
+        target_gender = "female" if user_gender == "male" else "male"
+        return f"profiles.gender = '{target_gender}' AND profiles.sexual_preferences IN ('heterosexual', 'bisexual')"
+
     elif user_pref == "homosexual":
+        # Cherche le même genre, qui soit homo ou bi
         return f"profiles.gender = '{user_gender}' AND profiles.sexual_preferences IN ('homosexual', 'bisexual')"
+
     elif user_pref == "bisexual":
-        return "profiles.sexual_preferences IN ('homosexual', 'heterosexual', 'bisexual')"
+        # Cherche :
+        # - le même genre avec orientation bi ou homo
+        # - le sexe opposé avec orientation bi ou hétéro
+        same_gender = user_gender
+        opposite_gender = "male" if user_gender == "female" else "female"
+        return (
+            f"((profiles.gender = '{same_gender}' AND profiles.sexual_preferences IN ('homosexual', 'bisexual')) "
+            f"OR (profiles.gender = '{opposite_gender}' AND profiles.sexual_preferences IN ('heterosexual', 'bisexual')))"
+        )
+
+    # Par défaut (au cas où), ne filtre rien
     return "TRUE"
 
 def calculate_age(birthday):

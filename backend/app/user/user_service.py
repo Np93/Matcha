@@ -124,3 +124,12 @@ async def update_user_info(user_id: int, first_name: str = None, last_name: str 
     async with engine.begin() as conn:
         await conn.execute(query, params)
         return True
+
+async def mark_users_offline_if_needed():
+    query = text("""
+        UPDATE users
+        SET status = FALSE
+        WHERE status = TRUE AND laste_connexion < NOW() - INTERVAL '30 minutes'
+    """)
+    async with engine.begin() as conn:
+        await conn.execute(query)

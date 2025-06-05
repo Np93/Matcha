@@ -61,3 +61,9 @@ async def logout(request: Request, response: Response):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     return {"message": "Logged out successfully"}
+
+@router.post("/ping")
+async def ping(request: Request):
+    user = await verify_user_from_token(request)
+    await update_user_status(user["id"], True)
+    return {"message": "pong"}

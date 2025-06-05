@@ -28,7 +28,7 @@ const CompleteProfile = () => {
         .then(setLocation)
         .catch((err) => console.error("Erreur localisation:", err));
     }, []);
-
+    console.log("la localisation avce nouvelle metohode ", location)
     // Gérer la sélection/désélection d'un intérêt
     const toggleInterest = (interest) => {
       setSelectedInterests((prev) =>

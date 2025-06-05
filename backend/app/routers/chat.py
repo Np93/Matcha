@@ -39,6 +39,7 @@ async def get_user_conversations(request: Request):
             "name": row.other_username,
             "avatar": avatar,
             "isOnline": row.is_online,
+            "other_user_id": other_id
         })
 
     return filtered
@@ -139,111 +140,161 @@ async def typing_status(request: Request, data: dict):
 
     return {"message": "Typing status updated"}
 
-# @router.websocket("/ws/video/{conversation_id}")
-# async def websocket_video_endpoint(websocket: WebSocket, conversation_id: int):
-#     """ WebSocket pour les signaux WebRTC """
-#     await websocket.accept()
-    
-#     if conversation_id not in active_connections:
-#         active_connections[conversation_id] = []
+active_video_connections: dict[int, list[tuple[int, WebSocket]]] = {}
 
-#     active_connections[conversation_id].append(websocket)
+@router.websocket("/ws/video/{conversation_id}")
+async def video_websocket(websocket: WebSocket, conversation_id: int):
+    print(f"✅ Connexion WebSocket vidéo pour conversation {conversation_id}")
+    await websocket.accept()
+    token = websocket.cookies.get("access_token")
+    if not token:
+        await websocket.close(code=1008)
+        return
 
-#     try:
-#         while True:
-#             message = await websocket.receive_text()
-#             for ws in active_connections[conversation_id]:
-#                 if ws != websocket:
-#                     await ws.send_text(message)
-#     except WebSocketDisconnect:
-#         active_connections[conversation_id].remove(websocket)
+    try:
+        user = await verify_user_from_socket_token(token)
+    except JWTError:
+        await websocket.close(code=1008)
+        return
 
-# active_call_sessions = {}
+    user_id = user["id"]
+    active_video_connections.setdefault(conversation_id, []).append((user_id, websocket))
+    print(f"✅ Video WebSocket ouverte pour user {user_id} dans la conversation {conversation_id}")
 
-# @router.websocket("/ws/call/{receiver_id}")
-# async def websocket_call(websocket: WebSocket, receiver_id: int):
-#     """ WebSocket pour gérer les appels en temps réel. """
-#     await websocket.accept()
-#     token = websocket.cookies.get("access_token")
-    
-#     if not token:
-#         await websocket.close(code=1008)
-#         return
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            data = json.loads(raw)
 
-#     try:
-#         user = await verify_user_from_socket_token(token)
-#         caller_id = user["id"]
-#     except:
-#         await websocket.close(code=1008)
-#         return
-
-#     # Stocke la connexion pour cet utilisateur
-#     active_call_sessions[caller_id] = websocket
-
-#     # Envoi d'une notification à l'utilisateur appelé
-#     if receiver_id in active_call_sessions:
-#         await active_call_sessions[receiver_id].send_text(json.dumps({
-#             "event": "incoming_call",
-#             "caller_id": caller_id,
-#             "caller_name": user["username"]
-#         }))
-
-#     try:
-#         while True:
-#             message = await websocket.receive_text()
-#             if receiver_id in active_call_sessions:
-#                 await active_call_sessions[receiver_id].send_text(message)
-#     except WebSocketDisconnect:
-#         active_call_sessions.pop(caller_id, None)
+            # On broadcast l'événement à l'autre utilisateur
+            for uid, conn in active_video_connections[conversation_id]:
+                if uid != user_id:
+                    try:
+                        await conn.send_text(raw)
+                    except Exception as e:
+                        print(f"⚠️ Impossible d’envoyer à {uid} : {e}")
+    except WebSocketDisconnect:
+        active_video_connections[conversation_id] = [
+            conn for conn in active_video_connections[conversation_id] if conn[1] != websocket
+        ]
+        if not active_video_connections[conversation_id]:
+            del active_video_connections[conversation_id]
+        print(f"🔌 Video WebSocket fermée pour user {user_id} dans la conversation {conversation_id}")
 
 
 
-# active_call_sessions = {}
 
-# @router.websocket("/ws/call/{user_id}")
-# async def websocket_call(websocket: WebSocket, user_id: int):
-#     """ Gère l'appel vidéo en WebRTC entre deux utilisateurs via WebSockets """
-#     await websocket.accept()
-#     active_call_sessions[user_id] = websocket
 
-#     try:
-#         while True:
-#             message = await websocket.receive_text()
-#             data = json.loads(message)
 
-#             if data["event"] == "call_request":
-#                 # Vérifie si le destinataire est connecté
-#                 receiver_id = data["receiver_id"]
-#                 if receiver_id in active_call_sessions:
-#                     await active_call_sessions[receiver_id].send_text(json.dumps({
-#                         "event": "incoming_call",
-#                         "caller_id": user_id,
-#                         "caller_name": data["caller_name"]
-#                     }))
 
-#             elif data["event"] == "call_response":
-#                 # L'utilisateur appelé accepte ou refuse l'appel
-#                 caller_id = data["caller_id"]
-#                 if caller_id in active_call_sessions:
-#                     await active_call_sessions[caller_id].send_text(json.dumps({
-#                         "event": "call_response",
-#                         "accepted": data["accepted"]
-#                     }))
 
-#             elif data["event"] in ["offer", "answer", "candidate"]:
-#                 # Transmet l'ICE candidate, offer ou answer entre les utilisateurs
-#                 target_id = data["target_id"]
-#                 if target_id in active_call_sessions:
-#                     await active_call_sessions[target_id].send_text(json.dumps(data))
 
-#             elif data["event"] == "call_end":
-#                 # L'un des utilisateurs raccroche, ferme la connexion WebSocket
-#                 target_id = data["target_id"]
-#                 if target_id in active_call_sessions:
-#                     await active_call_sessions[target_id].send_text(json.dumps({"event": "call_end"}))
-#                     await active_call_sessions[target_id].close()
-#                     del active_call_sessions[target_id]
 
-#     except WebSocketDisconnect:
-#         if user_id in active_call_sessions:
-#             del active_call_sessions[user_id]
+
+
+
+pending_invites = {}  # {chat_id: {"from": user_id, "status": "pending" | "accepted" | "declined"}}
+user_preferences = {}  # {"chat_user": {"moments": [...], "activities": [...]}}
+
+@router.post("/date_invite")
+async def send_date_invite(request: Request):
+    user = await verify_user_from_token(request)
+    sender_id = user["id"]
+    body = await request.json()
+    chat_id = body.get("chat_id")
+
+    convo = await get_conversation_users(chat_id)
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation introuvable")
+
+    receiver_id = convo.user1_id if convo.user2_id == sender_id else convo.user2_id
+
+    # Si l'invitation a été refusée ou jamais envoyée, on peut envoyer une nouvelle
+    invite = pending_invites.get(chat_id)
+    if not invite or invite.get("status") == "declined":
+        pending_invites[chat_id] = {"from": sender_id, "status": "pending"}
+
+        # Broadcast l'invitation aux 2 utilisateurs
+        for user_socket in active_connections.get(chat_id, []):
+            _, ws = user_socket
+            await ws.send_text(json.dumps({
+                "type": "date_invite",
+                "sender_id": sender_id,
+                "sender_name": user["username"],
+                "status": "pending"
+            }))
+        return {"ok": True}
+
+    # Si l'invitation est déjà en cours ou acceptée, ignorer
+    raise HTTPException(status_code=400, detail="Une invitation est déjà en cours ou acceptée.")
+
+@router.post("/date_invite/respond")
+async def respond_to_date_invite(request: Request):
+    user = await verify_user_from_token(request)
+    user_id = user["id"]
+    body = await request.json()
+    chat_id = body.get("chat_id")
+    accepted = body.get("accepted")
+
+    if chat_id not in pending_invites:
+        raise HTTPException(status_code=404, detail="Invitation introuvable")
+
+    pending_invites[chat_id]["status"] = "accepted" if accepted else "declined"
+
+    # Broadcast réponse
+    for _, ws in active_connections.get(chat_id, []):
+        await ws.send_text(json.dumps({
+            "type": "date_invite",
+            "sender_id": user_id,
+            "sender_name": user["username"],
+            "status": pending_invites[chat_id]["status"]
+        }))
+
+    return {"ok": True}
+
+@router.post("/date_invite/preferences")
+async def submit_preferences(request: Request):
+    user = await verify_user_from_token(request)
+    user_id = user["id"]
+    body = await request.json()
+    chat_id = body.get("chat_id")
+    moments = set(body.get("moments", []))
+    activities = set(body.get("activities", []))
+
+    if chat_id not in pending_invites or pending_invites[chat_id]["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="L'invitation n'a pas été acceptée par les deux utilisateurs.")
+
+    user_key = f"{chat_id}_{user_id}"
+    user_preferences[user_key] = {"moments": moments, "activities": activities}
+
+    # Trouver l'autre utilisateur
+    convo = await get_conversation_users(chat_id)
+    other_id = convo.user1_id if convo.user2_id == user_id else convo.user2_id
+    other_key = f"{chat_id}_{other_id}"
+
+    if other_key in user_preferences:
+        u1 = user_preferences[user_key]
+        u2 = user_preferences[other_key]
+
+        intersection_moments = u1["moments"] & u2["moments"]
+        intersection_activities = u1["activities"] & u2["activities"]
+
+        activity = "🎁 Surprise !" if "Fais-moi la surprise" in u1["activities"] or "Fais-moi la surprise" in u2["activities"] else next(iter(intersection_activities), None)
+        moment = next(iter(intersection_moments), None)
+
+        if activity and moment:
+            for _, ws in active_connections.get(chat_id, []):
+                await ws.send_text(json.dumps({
+                    "type": "date_result",
+                    "status": "success",
+                    "message": f"Proposition de rendez-vous : {moment} – {activity}"
+                }))
+        else:
+            for _, ws in active_connections.get(chat_id, []):
+                await ws.send_text(json.dumps({
+                    "type": "date_result",
+                    "status": "no_match",
+                    "message": "Aucun créneau commun. Veuillez restreindre vos choix."
+                }))
+
+    return {"ok": True}

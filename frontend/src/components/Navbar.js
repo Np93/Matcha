@@ -21,6 +21,15 @@ const Navbar = () => {
   const connectedUserId = useRef(null);
   const navigate = useNavigate();
 
+  const sendPing = async () => {
+    try {
+      await secureApiCall("/log/ping", "POST");
+      console.log("📡 Ping envoyé au serveur");
+    } catch (err) {
+      console.warn("Erreur lors du ping :", err);
+    }
+  };
+
   //  Connexion WebSocket pour écouter les nouvelles notifications
   useEffect(() => {
     if (!isLoggedIn || !userId) return;
@@ -44,7 +53,7 @@ const Navbar = () => {
     }
   
     // Création d'une nouvelle socket
-    const newSocket = new WebSocket(`ws://${window.location.host}/notifications/ws/notifications`);
+    const newSocket = new WebSocket(`wss://${window.location.host}/notifications/ws/notifications`);
     socket.current = newSocket;
     connectedUserId.current = userId;
   
@@ -77,6 +86,18 @@ const Navbar = () => {
         connectedUserId.current = null;
       }
     };
+  }, [isLoggedIn, userId]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !userId) return;
+  
+    sendPing(); // ping immédiat au montage
+  
+    const interval = setInterval(() => {
+      sendPing();
+    }, 5 * 60 * 1000); // 30 minutes
+  
+    return () => clearInterval(interval);
   }, [isLoggedIn, userId]);
 
   //  Récupération des notifications non lues lors du chargement

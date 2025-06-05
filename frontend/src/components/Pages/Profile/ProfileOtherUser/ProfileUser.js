@@ -41,6 +41,7 @@ const ProfileUser = () => {
 
   const formatLastConnexion = (dateString) => {
     if (!dateString) return "Unknown";
+    console.log(dateString)
     const date = new Date(dateString);
     const now = new Date();
     const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));

@@ -26,7 +26,7 @@ async def complete_profile(request: Request):
     birthday = body.get("birthday")
     location = body.get("location", None)
     map_enabled = body.get("mapEnabled", False)
-
+    print("localisation lors du profile complete ", location)
     # Validation sécurisée des champs
     validate_text_field(gender, "gender")
     validate_text_field(sexual_preferences, "sexual preferences")
