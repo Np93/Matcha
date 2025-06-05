@@ -10,7 +10,7 @@ const LikeButton = ({ userId, targetId, isLiked, isUnliked, onLike, onUnlike, di
       await secureApiCall("/match/like", "POST", { userId, targetId });
       onLike();
     } catch (error) {
-      console.error("Like failed:", error);
+      console.log("Like failed:", error);
     }
   };
 
@@ -20,7 +20,7 @@ const LikeButton = ({ userId, targetId, isLiked, isUnliked, onLike, onUnlike, di
       onUnlike();
       setShowConfirm(false);
     } catch (error) {
-      console.error("Unlike failed:", error);
+      console.log("Unlike failed:", error);
     }
   };
 

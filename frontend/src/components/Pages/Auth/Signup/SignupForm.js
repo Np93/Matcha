@@ -61,7 +61,7 @@ const SignupForm = () => {
           updateAuthContext({...response, has_profile: false});
           navigate("/complete-profile");
         } catch (error) {
-          console.error("OAuth error:", error);
+          console.log("OAuth error:", error);
           alert("Google login failed.");
         }
       }

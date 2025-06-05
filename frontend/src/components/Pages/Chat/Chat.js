@@ -73,7 +73,7 @@ const Chat = () => {
         const response = await secureApiCall("/chat/conversations");
         setConversations(response);
       } catch (error) {
-        console.error("Erreur lors de la récupération des conversations :", error);
+        console.log("Erreur lors de la récupération des conversations :", error);
       }
     };
     fetchConversations();
@@ -89,7 +89,7 @@ const Chat = () => {
           scrollToBottom();
           connectWebSocket(selectedChat.id);
         } catch (error) {
-          console.error("Erreur lors de la récupération des messages :", error);
+          console.log("Erreur lors de la récupération des messages :", error);
         }
       };
       fetchMessages();
@@ -129,7 +129,7 @@ const Chat = () => {
       scrollToBottom();
       notifyTyping(false);
     } catch (error) {
-      console.error("Erreur lors de l'envoi du message :", error);
+      console.log("Erreur lors de l'envoi du message :", error);
     }
   };
 
@@ -150,7 +150,7 @@ const Chat = () => {
         is_typing: isTyping,
       });
     } catch (error) {
-      console.error("Erreur lors de l'envoi du typing status:", error);
+      console.log("Erreur lors de l'envoi du typing status:", error);
     }
   };
 

@@ -32,7 +32,7 @@ const ProfileUser = () => {
         setProfileData(response);
         setCanLike(response.can_like);
       } catch (error) {
-        console.error("Failed to fetch user profile:", error);
+        console.log("Failed to fetch user profile:", error);
       }
     };
 
@@ -63,7 +63,7 @@ const ProfileUser = () => {
       await secureApiCall("/profile/report", "POST", { userId, targetId: profileId });
       alert("User has been reported for fake account.");
     } catch (error) {
-      console.error("Report failed:", error);
+      console.log("Report failed:", error);
     }
   };
 
@@ -72,7 +72,7 @@ const ProfileUser = () => {
       await secureApiCall("/profile/block", "POST", { userId, targetId: profileId });
       alert("User has been blocked.");
     } catch (error) {
-      console.error("Block failed:", error);
+      console.log("Block failed:", error);
     }
   };
 
