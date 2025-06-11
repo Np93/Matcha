@@ -20,13 +20,17 @@ up: ## Démarrer tous les services en arrière-plan
 	$(DC) up
 	@echo "Containers are up."
 
-dev: ## Lancer tous les services avec React en mode dev (npm start)
+dev: certs ## Lancer tous les services avec React en mode dev (npm start)
 	$(DC) -f docker-compose.yml --profile dev up --build
-	@echo "Dev environment started on port 3000."
+	@echo "Dev environment started on port 443."
 
-prod: ## Lancer tous les services avec React buildé + Nginx
+prod: certs ## Lancer tous les services avec React buildé + Nginx
 	$(DC) -f docker-compose.yml --profile prod up --build
-	@echo "Production environment started on port 80."
+	@echo "Production environment started on port 443."
+
+certs: ## Générer les certificats SSL si nécessaire
+	$(DC) -f docker-compose.yml --profile dev run --rm certgen
+	@echo "Certificats générés dans ./docker/ssl"
 
 # Supprimer les conteneurs mais conserver les volumes
 clean: ## Arrêter et supprimer les conteneurs, tout en conservant les volumes

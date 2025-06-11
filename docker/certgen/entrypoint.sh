@@ -2,11 +2,16 @@
 
 set -e
 
+if [ -f /certs/localhost.crt ] && [ -f /certs/localhost.key ]; then
+  echo "✅ Certificats déjà présents. Rien à faire."
+  exit 0
+fi
+
 apk add --no-cache openssl iproute2 coreutils
 
 mkdir -p /certs
 
-# ✅ Détection IP locale (la première non loopback trouvée)
+# Détection IP locale (la première non loopback trouvée)
 IP_LOCAL=$(ip -o -4 addr show eth0 | awk '{split($4, a, "/"); print a[1]; exit}')
 
 echo "IP locale détectée : $IP_LOCAL"

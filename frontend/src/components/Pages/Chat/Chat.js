@@ -48,6 +48,16 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
+    const dotsArray = ["", ".", "..", "..."];
+    let index = 0;
+    const interval = setInterval(() => {
+      setTypingDots(dotsArray[index]);
+      index = (index + 1) % dotsArray.length;
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     if (selectedChat) {
       const fetchMessages = async () => {
         try {
