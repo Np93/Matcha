@@ -121,3 +121,9 @@ tmp/
 backtest_data/
 **/*inmemory_cache_mock.yaml
 *node_modules
+
+*.key
+*.crt
+*.cnf
+ssl/
+nginx/

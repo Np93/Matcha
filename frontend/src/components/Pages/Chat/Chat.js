@@ -59,24 +59,36 @@ const Chat = () => {
 
   useEffect(() => {
     if (selectedChat) {
-      const fetchMessages = async () => {
+      const fetchMessagesAndStatus = async () => {
         try {
-          const response = await secureApiCall(`/chat/messages/${selectedChat.id}`);
-          setMessages(response);
-          const lastDateInvite = [...response].reverse().find(msg => msg.type === "date_invite");
-          if (lastDateInvite) {
-            setLatestDateStatus(lastDateInvite.status); // "pending", "accepted", "declined"
-          } else {
-            setLatestDateStatus(null);
-          }
+          const [messagesRes, statusRes] = await Promise.all([
+            secureApiCall(`/chat/messages/${selectedChat.id}`),
+            secureApiCall(`/chat/date_invite/status?chat_id=${selectedChat.id}`, "GET"),
+          ]);
+          setMessages(messagesRes);
           scrollToBottom();
           connectWebSocket(selectedChat.id);
+
+          if (statusRes?.status) {
+            setLatestDateStatus(statusRes.status);
+          } else {
+            // Fallback : regarder dans les messages
+            const lastDateInvite = [...messagesRes].reverse().find(msg => msg.type === "date_invite");
+            if (lastDateInvite) {
+              setLatestDateStatus(lastDateInvite.status);
+            } else {
+              setLatestDateStatus(null);
+            }
+          }
         } catch (error) {
-          console.error("Erreur messages :", error);
+          console.error("Erreur récupération messages/statut :", error);
         }
       };
-      fetchMessages();
-    } else if (socket.current) socket.current.close();
+
+      fetchMessagesAndStatus();
+    } else if (socket.current) {
+      socket.current.close();
+    }
   }, [selectedChat]);
 
   const connectWebSocket = (chatId) => {
@@ -213,9 +225,25 @@ const Chat = () => {
                 <button
                   onClick={async () => {
                     if (latestDateStatus === "accepted") {
-                      setShowDateModal(true); // ouvrir la modale
-                    } else {
-                      await secureApiCall("/chat/date_invite", "POST", { chat_id: selectedChat.id });
+                      setShowDateModal(true);
+                      return;
+                    }
+
+                    try {
+                      const res = await secureApiCall("/chat/date_invite", "POST", { chat_id: selectedChat.id });
+                      if (res?.ok) {
+                        setLatestDateStatus("pending");
+                      }
+                    } catch (err) {
+                      if (err?.response?.data?.detail === "Une invitation est déjà en cours") {
+                        // Réaffiche l’invitation
+                        const statusRes = await secureApiCall(`/chat/date_invite/status?chat_id=${selectedChat.id}`, "GET");
+                        if (statusRes?.status) {
+                          setLatestDateStatus(statusRes.status);
+                        }
+                      } else {
+                        console.error("Erreur invitation date :", err);
+                      }
                     }
                   }}
                   className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-md text-sm"
@@ -242,49 +270,64 @@ const Chat = () => {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`max-w-[75%] p-3 rounded-lg text-sm break-words ${
-                      msg.sender_id === userId ? "bg-red-500 ml-auto" : "bg-gray-700 mr-auto"
-                    }`}
-                  >
-                    {msg.type === "date_invite" ? (
-                      <div className="text-white">
-                        <p><strong>{msg.sender_name}</strong> vous invite à planifier un rendez-vous !</p>
+                {messages.map((msg, index) => {
+                  const isSystem = msg.type === "system" || msg.type === "date_result";
+                  const isMe = msg.sender_id === userId;
 
-                        {msg.status === "pending" && msg.sender_id !== userId && (
-                          <div className="mt-2 flex gap-2">
-                            <button
-                              onClick={() => handleDateResponse(true)}
-                              className="bg-green-600 px-3 py-1 rounded"
-                            >
-                              Accepter
-                            </button>
-                            <button
-                              onClick={() => handleDateResponse(false)}
-                              className="bg-red-600 px-3 py-1 rounded"
-                            >
-                              Refuser
-                            </button>
-                          </div>
-                        )}
-                        {msg.status === "accepted" && <p className="mt-2 italic">Invitation acceptée. Proposez vos créneaux !</p>}
-                        {msg.status === "declined" && <p className="mt-2 italic">Invitation refusée.</p>}
-                      </div>
-                    ) : (
-                      <>
-                        {msg.content}
-                        <div className="text-[10px] text-right text-gray-300 mt-1">
-                        {!isNaN(new Date(msg.timestamp)) ? new Date(msg.timestamp).toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }) : "🕒"}
+                  return (
+                    <div
+                      key={index}
+                      className={
+                        isSystem
+                          ? "w-full flex justify-center"
+                          : `max-w-[75%] p-3 rounded-lg text-sm break-words ${
+                              isMe ? "bg-red-500 ml-auto" : "bg-gray-700 mr-auto"
+                            }`
+                      }
+                    >
+                      {msg.type === "date_invite" ? (
+                        <div className="text-white">
+                          <p><strong>{msg.sender_name}</strong> vous invite à planifier un rendez-vous !</p>
+
+                          {msg.status === "pending" && msg.sender_id !== userId && (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                onClick={() => handleDateResponse(true)}
+                                className="bg-green-600 px-3 py-1 rounded"
+                              >
+                                Accepter
+                              </button>
+                              <button
+                                onClick={() => handleDateResponse(false)}
+                                className="bg-red-600 px-3 py-1 rounded"
+                              >
+                                Refuser
+                              </button>
+                            </div>
+                          )}
+                          {msg.status === "accepted" && <p className="mt-2 italic">Invitation acceptée. Proposez vos créneaux !</p>}
+                          {msg.status === "declined" && <p className="mt-2 italic">Invitation refusée.</p>}
                         </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                      ) : isSystem ? (
+                        <div className="bg-yellow-600 text-white text-sm italic px-4 py-2 rounded-md text-center max-w-md">
+                          {msg.content}
+                        </div>
+                      ) : (
+                        <>
+                          {msg.content}
+                          <div className="text-[10px] text-right text-gray-300 mt-1">
+                            {!isNaN(new Date(msg.timestamp))
+                              ? new Date(msg.timestamp).toLocaleTimeString("fr-FR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "🕒"}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
                 <div ref={messagesEndRef}></div>
                   {showDateModal && (
                   <DatePlanner

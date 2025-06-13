@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSo
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
 from app.profile.block_service import are_users_blocked
 from app.routers.notifications import send_notification
-from app.chat.chat_service import get_user_conversations_from_db, get_messages_from_conversation, get_conversation_users, insert_message
+from app.chat.chat_service import (
+    get_user_conversations_from_db, get_messages_from_conversation, get_conversation_users, insert_message,
+    insert_date_invite, get_latest_invite, update_invite_status,
+    save_user_preferences, get_preferences)
 from jose import JWTError, jwt
 from app.match.match_service import check_if_unliked
 import json, base64
@@ -53,7 +56,8 @@ async def get_messages(conversation_id: int, request: Request):
             "id": row.id,
             "sender_id": row.sender_id,
             "content": row.content,
-            "timestamp": str(row.timestamp)
+            "timestamp": str(row.timestamp),
+            "type": row.type
         }
         for row in rows
     ]
@@ -182,20 +186,6 @@ async def video_websocket(websocket: WebSocket, conversation_id: int):
         print(f"🔌 Video WebSocket fermée pour user {user_id} dans la conversation {conversation_id}")
 
 
-
-
-
-
-
-
-
-
-
-
-
-pending_invites = {}  # {chat_id: {"from": user_id, "status": "pending" | "accepted" | "declined"}}
-user_preferences = {}  # {"chat_user": {"moments": [...], "activities": [...]}}
-
 @router.post("/date_invite")
 async def send_date_invite(request: Request):
     user = await verify_user_from_token(request)
@@ -207,26 +197,32 @@ async def send_date_invite(request: Request):
     if not convo:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
 
-    receiver_id = convo.user1_id if convo.user2_id == sender_id else convo.user2_id
+    latest = await get_latest_invite(chat_id)
 
-    # Si l'invitation a été refusée ou jamais envoyée, on peut envoyer une nouvelle
-    invite = pending_invites.get(chat_id)
-    if not invite or invite.get("status") == "declined":
-        pending_invites[chat_id] = {"from": sender_id, "status": "pending"}
+    if latest and latest.status == "pending":
+        raise HTTPException(status_code=400, detail="Une invitation est déjà en cours")
+    
+    if latest and latest.status == "accepted":
+        return {"ok": True}  # autoriser l'ouverture de modale
 
-        # Broadcast l'invitation aux 2 utilisateurs
-        for user_socket in active_connections.get(chat_id, []):
-            _, ws = user_socket
-            await ws.send_text(json.dumps({
-                "type": "date_invite",
-                "sender_id": sender_id,
-                "sender_name": user["username"],
-                "status": "pending"
-            }))
-        return {"ok": True}
+    await insert_date_invite(chat_id, sender_id)
 
-    # Si l'invitation est déjà en cours ou acceptée, ignorer
-    raise HTTPException(status_code=400, detail="Une invitation est déjà en cours ou acceptée.")
+    await insert_message(
+        conversation_id=chat_id,
+        sender_id=sender_id,
+        content=f"{user['username']} vous invite à planifier un rendez-vous.",
+        type_="date_invite"
+    )
+
+    for _, ws in active_connections.get(chat_id, []):
+        await ws.send_text(json.dumps({
+            "type": "date_invite",
+            "sender_id": sender_id,
+            "sender_name": user["username"],
+            "status": "pending"
+        }))
+
+    return {"ok": True}
 
 @router.post("/date_invite/respond")
 async def respond_to_date_invite(request: Request):
@@ -236,18 +232,27 @@ async def respond_to_date_invite(request: Request):
     chat_id = body.get("chat_id")
     accepted = body.get("accepted")
 
-    if chat_id not in pending_invites:
-        raise HTTPException(status_code=404, detail="Invitation introuvable")
+    invite = await get_latest_invite(chat_id)
+    if not invite:
+        raise HTTPException(status_code=404, detail="Aucune invitation trouvée")
 
-    pending_invites[chat_id]["status"] = "accepted" if accepted else "declined"
+    status = "accepted" if accepted else "declined"
+    await update_invite_status(chat_id, status)
 
-    # Broadcast réponse
+    print("insert message respond_to_date_invite? valeur de user_id: ", user_id)
+    await insert_message(
+        conversation_id=chat_id,
+        sender_id=user_id,
+        content="Invitation acceptée." if accepted else "Invitation refusée.",
+        type_="date_invite"
+    )
+
     for _, ws in active_connections.get(chat_id, []):
         await ws.send_text(json.dumps({
             "type": "date_invite",
             "sender_id": user_id,
             "sender_name": user["username"],
-            "status": pending_invites[chat_id]["status"]
+            "status": status
         }))
 
     return {"ok": True}
@@ -256,45 +261,84 @@ async def respond_to_date_invite(request: Request):
 async def submit_preferences(request: Request):
     user = await verify_user_from_token(request)
     user_id = user["id"]
+
     body = await request.json()
     chat_id = body.get("chat_id")
-    moments = set(body.get("moments", []))
-    activities = set(body.get("activities", []))
+    moments = body.get("moments", [])
+    activities = body.get("activities", [])
 
-    if chat_id not in pending_invites or pending_invites[chat_id]["status"] != "accepted":
-        raise HTTPException(status_code=400, detail="L'invitation n'a pas été acceptée par les deux utilisateurs.")
+    invite = await get_latest_invite(chat_id)
+    if not invite or invite["status"] != "accepted":
+        raise HTTPException(status_code=400, detail="Invitation non acceptée")
 
-    user_key = f"{chat_id}_{user_id}"
-    user_preferences[user_key] = {"moments": moments, "activities": activities}
+    await save_user_preferences(chat_id, user_id, moments, activities)
 
-    # Trouver l'autre utilisateur
-    convo = await get_conversation_users(chat_id)
-    other_id = convo.user1_id if convo.user2_id == user_id else convo.user2_id
-    other_key = f"{chat_id}_{other_id}"
+    prefs = await get_preferences(chat_id)
+    if len(prefs) < 2:
+        return {"waiting": True}
 
-    if other_key in user_preferences:
-        u1 = user_preferences[user_key]
-        u2 = user_preferences[other_key]
+    def parse_json_field(val):
+        try:
+            return set(json.loads(val)) if isinstance(val, str) else set(val)
+        except Exception:
+            return set()
 
-        intersection_moments = u1["moments"] & u2["moments"]
-        intersection_activities = u1["activities"] & u2["activities"]
+    u1, u2 = prefs
+    m1 = parse_json_field(u1["moments"])
+    a1 = parse_json_field(u1["activities"])
+    m2 = parse_json_field(u2["moments"])
+    a2 = parse_json_field(u2["activities"])
 
-        activity = "🎁 Surprise !" if "Fais-moi la surprise" in u1["activities"] or "Fais-moi la surprise" in u2["activities"] else next(iter(intersection_activities), None)
-        moment = next(iter(intersection_moments), None)
+    intersection_moments = m1 & m2
+    intersection_activities = a1 & a2
 
-        if activity and moment:
-            for _, ws in active_connections.get(chat_id, []):
-                await ws.send_text(json.dumps({
-                    "type": "date_result",
-                    "status": "success",
-                    "message": f"Proposition de rendez-vous : {moment} – {activity}"
-                }))
-        else:
-            for _, ws in active_connections.get(chat_id, []):
-                await ws.send_text(json.dumps({
-                    "type": "date_result",
-                    "status": "no_match",
-                    "message": "Aucun créneau commun. Veuillez restreindre vos choix."
-                }))
+    # Gestion de la surprise
+    activity = (
+        "🎁 Surprise !"
+        if "Fais-moi la surprise" in a1 or "Fais-moi la surprise" in a2
+        else next(iter(intersection_activities), None)
+    )
+    moment = next(iter(intersection_moments), None)
+
+    message = (
+        f"Proposition de rendez-vous : {moment} – {activity}"
+        if activity and moment else
+        "Aucun créneau commun. Veuillez restreindre vos choix."
+    )
+    print("insert message submit_preferences? valeur de user_id: ", user_id)
+
+    await insert_message(
+        conversation_id=chat_id,
+        sender_id=user_id,
+        content=message,
+        type_="system"
+    )
+
+    for _, ws in active_connections.get(chat_id, []):
+        await ws.send_text(json.dumps({
+            "type": "date_result",
+            "status": "success" if activity and moment else "no_match",
+            "message": message
+        }))
 
     return {"ok": True}
+
+@router.get("/date_invite/status")
+async def get_date_invite_status(request: Request, chat_id: int):
+    user = await verify_user_from_token(request)
+
+    # On utilise .mappings() dans la fonction appelée
+    invite = await get_latest_invite(chat_id)
+    if not invite:
+        return {"status": None}
+
+    sender_id = invite["sender_id"]
+
+    from app.user.user_service import get_user_by_id
+    sender = await get_user_by_id(sender_id)
+
+    return {
+        "status": invite["status"],
+        "sender_id": sender_id,
+        "sender_name": sender["username"]
+    }
