@@ -246,8 +246,8 @@ const SettingProfil = () => {
                 <option value="">Select Preference</option>
                 <option value="heterosexual">Heterosexual</option>
                 <option value="homosexual">Homosexual</option>
-                {/* <option value="bisexual">Bisexual</option>
-                <option value="other">Other</option> */}
+                <option value="bisexual">Bisexual</option>
+                {/* <option value="other">Other</option> */}
               </select>
             </div>
             <div>
