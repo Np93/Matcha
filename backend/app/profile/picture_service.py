@@ -69,7 +69,7 @@ async def set_main_picture(user_id: int, picture_id: int):
             {"id": picture_id, "user_id": user_id}
         )
         if result.fetchone() is None:
-            raise HTTPException(status_code=403, detail="Picture not found or unauthorized")
+            return {"success": False, "detail": "Picture not found or unauthorized"}
 
         # Mise à jour : une seule photo principale
         await conn.execute(
@@ -83,6 +83,7 @@ async def set_main_picture(user_id: int, picture_id: int):
             """),
             {"id": picture_id, "user_id": user_id}
         )
+        return {"success": True, "message": "Main profile picture updated successfully"}
 
 async def ensure_main_picture(conn, user_id: int):
     result = await conn.execute(

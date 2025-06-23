@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiCall } from "../../../../utils/api";
 import { useAuth } from "../../../../context/AuthContext";
 import backgroundImage from "../../../../assets/images/background_login.jpg";
+import { showErrorToast } from "../../../../utils/showErrorToast";
 
 const API_URL = "/api";
 
@@ -19,7 +20,7 @@ const LoginForm = () => {
           email,
           password,
         });
-      console.log(response);
+      // console.log(response);
       
       // Get user status to check if profile is complete
       const userStatus = await apiCall("/log/status", "GET");
@@ -34,7 +35,7 @@ const LoginForm = () => {
         navigate("/complete-profile");
       }
     } catch (error) {
-      alert(error.message);
+      // alert(error.message);
     }
   };
 
@@ -53,6 +54,10 @@ const LoginForm = () => {
     const messageListener = async (event) => {
       if (event.data?.type === "google-auth-success") {
         window.removeEventListener("message", messageListener);
+        if (!event.data.success) {
+          showErrorToast("Google login failed. Please try again.");
+          return;
+        }
         try {
           const response = await apiCall("/auth/me", "GET");
           // Get user status to check if profile is complete
@@ -68,8 +73,9 @@ const LoginForm = () => {
             navigate("/complete-profile");
           }
         } catch (error) {
-          console.error("OAuth error:", error);
-          alert("Google login failed.");
+          // console.error("OAuth error:", error);
+          // alert("Google login failed.");
+          showErrorToast("Google login failed.")
         }
       }
     };

@@ -41,6 +41,20 @@ async def check_match(liker_id: int, liked_id: int):
         )
         return result.first()
 
+async def mutual_like_by_match(user_a_id: int, user_b_id: int) -> bool:
+    """Retourne True si user A et user B se sont likés mutuellement (match)."""
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            text("""
+                SELECT
+                    (SELECT 1 FROM likes WHERE liker_id = :a AND liked_id = :b AND unlike IS NOT TRUE LIMIT 1) AS a_likes_b,
+                    (SELECT 1 FROM likes WHERE liker_id = :b AND liked_id = :a AND unlike IS NOT TRUE LIMIT 1) AS b_likes_a
+            """),
+            {"a": user_a_id, "b": user_b_id}
+        )
+        row = result.first()
+        return bool(row and row.a_likes_b and row.b_likes_a)
+
 async def check_if_unliked(liker_id: int, liked_id: int) -> bool:
     query = text("""
         SELECT unlike

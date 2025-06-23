@@ -1,5 +1,6 @@
 from app.utils.jwt_handler import verify_user_from_token
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 from app.utils.validators import validate_text_field
 from app.profile.profile_service import upsert_profile
 import logging
@@ -18,6 +19,8 @@ async def complete_profile(request: Request):
     body = await request.json()
 
     user_id = await verify_user_from_token(request)  # Vérifie l'utilisateur
+    if isinstance(user_id, JSONResponse):
+        return user_id
     # print("c'est pas le token tout bon")
     gender = body.get("gender")
     sexual_preferences = body.get("sexual_preferences")
@@ -27,16 +30,25 @@ async def complete_profile(request: Request):
     location = body.get("location", None)
     map_enabled = body.get("mapEnabled", False)
     print("localisation lors du profile complete ", location)
+
+    if not sexual_preferences:
+        sexual_preferences = "bisexual"
     # Validation sécurisée des champs
-    validate_text_field(gender, "gender")
-    validate_text_field(sexual_preferences, "sexual preferences")
+    error = validate_text_field(gender, "gender")
+    if error:
+        return error
+    error = validate_text_field(sexual_preferences, "sexual preferences")
+    if error:
+        return error
     if biography:
-        validate_text_field(biography, "biography", regex=r"^[a-zA-Z0-9\s.,!?'-]+$")
+        error = validate_text_field(biography, "biography", regex=r"^[a-zA-Z0-9\s.,!?'-]+$")
+        if error:
+            return error
     if birthday:
         try:
             datetime.strptime(birthday, "%Y-%m-%d")
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+            return {"success": False, "detail": "Invalid date format. Use YYYY-MM-DD."}
     # print("user : ", user_id["id"])
     # Mise à jour ou insertion du profil
     await upsert_profile(user_id['id'], gender, sexual_preferences, biography, interests, birthday)
@@ -53,6 +65,7 @@ async def complete_profile(request: Request):
         )
 
     return {
+        "success": True,
         "id": user_id["id"],
         "message": "Profile completed successfully"
     }

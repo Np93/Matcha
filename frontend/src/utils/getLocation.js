@@ -40,7 +40,7 @@ export const getUserLocation = () => {
               locationMethod: "GPS",
             });
           } catch (err) {
-            console.warn("⚠️ Reverse lookup a échoué, on garde juste coords GPS.");
+            // console.warn("⚠️ Reverse lookup a échoué, on garde juste coords GPS.");
             resolve({
               latitude,
               longitude,
@@ -51,7 +51,7 @@ export const getUserLocation = () => {
           }
         },
         (error) => {
-          console.warn("📵 GPS refusé ou échoué :", error.message);
+          // console.warn("📵 GPS refusé ou échoué :", error.message);
           fallbackToIP();
         },
         { timeout: 5000 } // max délai avant fallback

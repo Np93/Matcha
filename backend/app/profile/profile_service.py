@@ -2,7 +2,6 @@ import json
 from datetime import datetime
 from sqlalchemy.sql import text
 from app.utils.database import engine
-from fastapi import HTTPException
 
 async def upsert_profile(user_id: int, gender: str, sexual_preferences: str, biography: str, interests: list, birthday: str = None):
     """
@@ -47,7 +46,7 @@ async def get_profile_by_user_id(id: int):
 
     # print("ceci est les informations dans profile_data qui gère la db: ", profile_data)
     if not profile_data:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        return None
 
     # Transformation du tuple en dictionnaire en utilisant les noms de colonnes
     column_names = result.keys()  # Récupère les noms des colonnes

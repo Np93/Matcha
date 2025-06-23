@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../../../utils/api";
 import { useAuth } from "../../../context/AuthContext";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 // List of predefined interests (same as CompleteProfile)
 const predefinedInterests = [
@@ -35,12 +36,12 @@ const SettingProfil = () => {
         // Fetch all user data in parallel
         const [blockedResponse, profileResponse] = await Promise.all([
           secureApiCall("/setting/blocked", "GET"),
-          secureApiCall("/profile", "GET")
+          secureApiCall("/profile/", "GET")
         ]);
         
         setBlockedUsers(blockedResponse.blocked_users || []);
         
-        console.log("Profile response:", profileResponse);
+        // console.log("Profile response:", profileResponse);
         
         // Handle the case where birthday might be null from the backend
         let formattedBirthday = "";
@@ -60,7 +61,7 @@ const SettingProfil = () => {
           interests: Array.isArray(profileResponse.interests) ? profileResponse.interests : []
         });
       } catch (error) {
-        console.error("Failed to fetch user data:", error);
+        showErrorToast("Failed to fetch user data:");
       } finally {
         setLoading(false);
       }
@@ -81,7 +82,7 @@ const SettingProfil = () => {
       setBlockedUsers((prev) => prev.filter((user) => !selectedIds.includes(user.id)));
       setSelectedIds([]);
     } catch (error) {
-      console.error("Unblock failed:", error);
+      showErrorToast("Unblock failed:");
     }
   };
 
@@ -133,10 +134,9 @@ const SettingProfil = () => {
         interests: profileData.interests
       });
       
-      alert("Profile updated successfully!");
+      showErrorToast("Profile updated successfully!");
     } catch (error) {
-      console.error("Failed to update profile:", error);
-      alert(error.message || "Failed to update profile.");
+      showErrorToast("Failed to update profile.");
     }
   };
 

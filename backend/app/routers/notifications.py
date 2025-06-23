@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Request, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from jose import JWTError
+from fastapi.responses import JSONResponse
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
 from app.notifications.notifications_service import (
     insert_notification,
@@ -15,7 +16,7 @@ notification_connections = {}
 
 @router.websocket("/ws/notifications")
 async def websocket_notifications(websocket: WebSocket):
-    await websocket.accept()
+    # await websocket.accept()
     token = websocket.cookies.get("access_token")
 
     if not token:
@@ -28,7 +29,7 @@ async def websocket_notifications(websocket: WebSocket):
     except JWTError:
         await websocket.close(code=1008)
         return
-
+    await websocket.accept()
     if user_id in notification_connections:
         try:
             await notification_connections[user_id].close()
@@ -45,23 +46,29 @@ async def websocket_notifications(websocket: WebSocket):
 @router.get("/notifications")
 async def get_notifications(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     notifications = await fetch_notifications(user["id"])
     return notifications
 
 @router.get("/notifications/unread")
 async def get_unread_notifications(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     notifications = await fetch_notifications(user["id"], unread_only=True)
     return notifications
 
 @router.post("/mark-read")
 async def mark_read(request: Request, data: dict):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     notification_ids = data.get("notification_ids", [])
     if not notification_ids:
-        raise HTTPException(status_code=400, detail="No notifications provided")
+        return {"success": False, "detail": "No notifications provided"}
     await mark_notifications_as_read(user["id"], notification_ids)
-    return {"message": "Notifications marked as read"}
+    return {"success": True, "message": "Notifications marked as read"}
 
 async def send_notification(receiver_id, sender_id, notification_type, context):
     if not await can_send_notification(receiver_id, sender_id):

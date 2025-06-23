@@ -1,7 +1,8 @@
 from sqlalchemy import text
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.responses import HTMLResponse
 from app.utils.database import engine
+from fastapi.responses import JSONResponse
 from app.utils.jwt_handler import verify_user_from_token
 from app.profile.picture_service import process_image, insert_picture, count_user_pictures
 import httpx
@@ -31,13 +32,34 @@ async def link_oauth_account(user_id: int, google_id: str) -> None:
             "provider_user_id": google_id
         })
 
+def google_popup_response(js_payload: dict) -> HTMLResponse:
+    """
+    Génère une réponse HTML qui envoie un message à la fenêtre parente (popup).
+    """
+    return HTMLResponse(content=f"""
+        <html>
+        <body>
+            <script>
+                window.opener.postMessage({json.dumps(js_payload)}, "*");
+                window.close();
+            </script>
+        </body>
+        </html>
+    """, media_type="text/html")
+
 async def handle_google_picture_upload(request: Request, user_data: dict):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     email = user_data["email"]
     picture_url = user_data.get("picture")
 
     if not picture_url:
-        raise HTTPException(status_code=400, detail="No profile picture found from Google")
+        return google_popup_response({
+            "type": "google-picture-error",
+            "success": False,
+            "detail": "No profile picture found from Google"
+        })
 
     user_id = user["id"]
 
@@ -49,13 +71,21 @@ async def handle_google_picture_upload(request: Request, user_data: dict):
         compressed_data = process_image(image_data)
 
         if await count_user_pictures(user_id) >= MAX_PICTURES:
-            raise HTTPException(status_code=400, detail="Maximum number of pictures reached")
+            return google_popup_response({
+                "type": "google-picture-error",
+                "success": False,
+                "detail": "Maximum number of pictures reached"
+            })
 
         await insert_picture(user_id, compressed_data)
 
     except Exception as e:
         print(f"[Google] Failed to fetch or insert image: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process Google image")
+        return google_popup_response({
+            "type": "google-picture-error",
+            "success": False,
+            "detail": "Failed to process Google image"
+        })
 
     return HTMLResponse(content="""
         <html>

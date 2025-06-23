@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request
 from app.utils.jwt_handler import verify_user_from_token
 from app.utils.database import engine
+from fastapi.responses import JSONResponse
 from app.chat.chat_service import create_conversation
 from app.match.match_service import check_same_like, insert_like, check_match, get_liked_user_ids, get_matching_profiles, enrich_profiles, sort_profiles, set_unlike_status, check_if_unliked
 from app.user.user_service import get_user_by_id
@@ -17,6 +18,8 @@ router = APIRouter()
 async def get_profiles(request: Request):
     """Récupère les profils selon les préférences avec enrichissement."""
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     user_id = user["id"]
 
     async with engine.begin() as conn:
@@ -25,7 +28,7 @@ async def get_profiles(request: Request):
         try:
             user_lat, user_lon = await get_user_location(conn, user_id)
         except Exception:
-            raise HTTPException(status_code=404, detail="Localisation non trouvée.")
+            return {"success": False, "detail": "Localisation non trouvée."}
 
         # Récupérer profil user (via `profile_service`)
         user_profile = await get_profile_by_user_id(user_id)
@@ -91,6 +94,8 @@ async def filter_profiles(request: Request):
    
     #Vérifier l'utilisateur connecté
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     user_id = user["id"]
 
     async with engine.begin() as conn:
@@ -99,7 +104,7 @@ async def filter_profiles(request: Request):
         try:
             user_lat, user_lon = await get_user_location(conn, user_id)
         except Exception:
-            raise HTTPException(status_code=404, detail="Localisation non trouvée.")
+            return {"success": False, "detail": "Localisation non trouvée."}
 
         # Récupérer profil user (via `get_profile_by_user_id`)
         user_profile = await get_profile_by_user_id(user_id)
@@ -162,12 +167,14 @@ async def filter_profiles(request: Request):
 async def like_profile(request: Request, data: dict):
     """Empêche de liker deux fois et crée une conversation en cas de match."""
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     liker_id = user["id"]
     liked_id = data.get("targetId")
     user_liked = await get_user_by_id(liked_id)
 
     if liker_id == liked_id:
-        raise HTTPException(status_code=400, detail="You cannot like yourself")
+        return {"success": False, "detail": "You cannot like yourself"}
 
     if await are_users_blocked(liker_id, liked_id):
         return {"matched": False}
@@ -179,11 +186,11 @@ async def like_profile(request: Request, data: dict):
     # Vérifie que le liker a une photo
     main_pic = await get_main_picture_of_user(liker_id)
     if not main_pic:
-        raise HTTPException(status_code=403, detail="You must upload a profile picture before liking others.")
+        return {"success": False, "detail": "You must upload a profile picture before liking others."}
 
     # Vérifie si l'utilisateur a déjà liké
     if await check_same_like(liker_id, liked_id):
-        raise HTTPException(status_code=400, detail="You already liked this user")
+        return {"success": False, "detail": "You already liked this user"}
 
     # Insère le like
     await insert_like(liker_id, liked_id)
@@ -210,7 +217,7 @@ async def like_profile(request: Request, data: dict):
         )
         await increment_fame_rating(liker_id, amount=7)
         await increment_fame_rating(liked_id, amount=7)
-        return {"matched": True}
+        return {"success": True, "matched": True}
 
     # Notification pour un simple like (pas encore un match)
     await send_notification(
@@ -220,20 +227,22 @@ async def like_profile(request: Request, data: dict):
         context=f"{user['username']} a liké votre profil ❤️"
     )
 
-    return {"matched": False}
+    return {"success": True, "matched": False}
 
 @router.post("/unlike")
 async def unlike_user(request: Request, data: dict):
     """Permet de 'unlike' un utilisateur, empêche toute interaction future."""
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     liker_id = user["id"]
     liked_id = data.get("targetId")
 
     if liker_id == liked_id:
-        raise HTTPException(status_code=400, detail="You cannot unlike yourself")
+        return {"success": False, "detail": "You cannot unlike yourself"}
 
     updated = await set_unlike_status(liker_id, liked_id)
     if not updated:
-        raise HTTPException(status_code=400, detail="Cannot unlike this user")
+        return {"success": False, "detail": "Cannot unlike this user"}
 
-    return {"message": "User unliked successfully"}
+    return {"success": True, "message": "User unliked successfully"}

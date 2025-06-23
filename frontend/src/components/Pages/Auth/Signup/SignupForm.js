@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiCall } from "../../../../utils/api";
 import { useAuth } from "../../../../context/AuthContext";
 import backgroundImage from "../../../../assets/images/background_signup.jpg";
+import { showErrorToast } from "../../../../utils/showErrorToast";
 
 const API_URL = "/api";
 
@@ -19,7 +20,8 @@ const SignupForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      showErrorToast("Passwords do not match");
+      // alert("Passwords do not match");
       return;
     }
 
@@ -31,10 +33,11 @@ const SignupForm = () => {
         last_name: lastName,
         username,
       });
-      updateAuthContext(response);
+      updateAuthContext({...response, has_profile: false});
       navigate("/complete-profile");
     } catch (error) {
-      alert(error.message);
+      // showErrorToast(error);
+      // alert(error.message);
     }
   };
 
@@ -53,14 +56,19 @@ const SignupForm = () => {
     const messageListener = async (event) => {
       if (event.data?.type === "google-auth-success") {
         window.removeEventListener("message", messageListener);
+        if (!event.data.success) {
+          showErrorToast("Google login failed. Please try again.");
+          return;
+        }
         try {
           const response = await apiCall("/auth/me", "GET");
           // Always set has_profile to false for new sign ups
           updateAuthContext({...response, has_profile: false});
           navigate("/complete-profile");
         } catch (error) {
-          console.error("OAuth error:", error);
-          alert("Google login failed.");
+          showErrorToast(error);
+          // console.error("OAuth error:", error);
+          // alert("Google login failed.");
         }
       }
     };

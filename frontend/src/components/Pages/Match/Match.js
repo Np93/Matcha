@@ -7,6 +7,7 @@ import SortButtons from "./utils/SortButtons";
 import ProfileCard from "./utils/ProfileCard";
 import LikeButton from "../../../utils/LikeButton";
 import UserMap from "./utils/UserMap";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 const Match = () => {
   const [profiles, setProfiles] = useState([]);
@@ -44,7 +45,7 @@ const Match = () => {
           ]);
         }
       } catch (error) {
-        console.error("Failed to fetch profiles:", error);
+        showErrorToast("Failed to fetch profiles");
       }
     };
     fetchInitialProfiles();
@@ -64,7 +65,7 @@ const Match = () => {
       }
       setShowFilters(false);
     } catch (error) {
-      console.error("Failed to fetch filtered profiles:", error);
+      showErrorToast("Failed to fetch filtered profiles");
     }
   };
 

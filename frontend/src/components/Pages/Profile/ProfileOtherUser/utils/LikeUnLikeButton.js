@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { secureApiCall } from "../../../../../utils/api";
 import UnlikeConfirmationModal from "./UnlikeConfirmationModal";
+import { showErrorToast } from "../../../../../utils/showErrorToast";
+
 
 const LikeButton = ({ userId, targetId, isLiked, isUnliked, onLike, onUnlike, disabled }) => {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -10,7 +12,7 @@ const LikeButton = ({ userId, targetId, isLiked, isUnliked, onLike, onUnlike, di
       await secureApiCall("/match/like", "POST", { userId, targetId });
       onLike();
     } catch (error) {
-      console.error("Like failed:", error);
+      showErrorToast("Like failed:");
     }
   };
 
@@ -20,7 +22,7 @@ const LikeButton = ({ userId, targetId, isLiked, isUnliked, onLike, onUnlike, di
       onUnlike();
       setShowConfirm(false);
     } catch (error) {
-      console.error("Unlike failed:", error);
+      showErrorToast("Unlike failed:");
     }
   };
 

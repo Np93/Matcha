@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { secureApiCall } from "./api";
 import { HeartIcon } from "@heroicons/react/24/outline";
+import { showErrorToast } from "./showErrorToast";
 
 const LikeButton = ({ userId, targetId, isLiked, onLike, disabled }) => {
   const [liked, setLiked] = useState(isLiked);
@@ -15,7 +16,7 @@ const LikeButton = ({ userId, targetId, isLiked, onLike, disabled }) => {
       setLiked(true);
       onLike(); // Permet de mettre à jour le parent
     } catch (error) {
-      console.error("Like failed:", error);
+      showErrorToast("Like failed:");
     }
   };
 

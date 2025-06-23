@@ -5,6 +5,7 @@ import React, {
     useImperativeHandle,
     forwardRef,
   } from "react";
+  import { showErrorToast } from "../../../../utils/showErrorToast";
   
   const VideoCall = forwardRef(({ userId, chatId, otherUserId }, ref) => {
     const [inCall, setInCall] = useState(false);
@@ -20,18 +21,22 @@ import React, {
     const hasEndedRef = useRef(false);
   
     const connectVideoSocket = () => {
+        if (!chatId) {
+          // console.warn("⛔ Impossible d'ouvrir la socket vidéo : utilisateur ou chatId invalide");
+          return;
+        }
         if (videoSocket.current && videoSocket.current.readyState <= 1) {
-            console.log("🔁 Socket déjà ouverte ou en cours");
+            // console.log("🔁 Socket déjà ouverte ou en cours");
             return;
           }
       
-        console.log("🔗 Connexion WebSocket vidéo sur chat", chatId);
+        // console.log("🔗 Connexion WebSocket vidéo sur chat", chatId);
         videoSocket.current = new WebSocket(
           `wss://${window.location.host}/chat/ws/video/${chatId}`
         );
       
         videoSocket.current.onopen = () => {
-          console.log("✅ WebSocket vidéo connectée");
+          // console.log("✅ WebSocket vidéo connectée");
         };
       
         videoSocket.current.onmessage = async (event) => {
@@ -40,11 +45,11 @@ import React, {
         };
       
         videoSocket.current.onclose = () => {
-          console.log("❌ WebSocket vidéo fermée");
+          // console.log("❌ WebSocket vidéo fermée");
         };
       
         videoSocket.current.onerror = (error) => {
-          console.error("Erreur WebSocket vidéo :", error);
+          // console.error("Erreur WebSocket vidéo :", error);
         };
       };
   
@@ -200,13 +205,13 @@ import React, {
               endCall();
             }
           } else {
-            alert("The user rejected the call.");
+            showErrorToast("The user rejected the call.");
             endCall();
           }
           break;
         case "call_cancel":
           if (!hasEndedRef.current) {
-            console.log("🔴 Call ended by peer");
+            // console.log("🔴 Call ended by peer");
             endCall(); // Ne renverra pas de call_cancel car hasEndedRef est déjà true après
           }
           break;
@@ -270,14 +275,14 @@ import React, {
             (videoSocket.current.readyState === WebSocket.OPEN ||
               videoSocket.current.readyState === WebSocket.CONNECTING)
           ) {
-            console.log("🧹 Fermeture socket pour ancien chat", lastChatIdRef.current);
+            // console.log("🧹 Fermeture socket pour ancien chat", lastChatIdRef.current);
             videoSocket.current.close();
           }
           videoSocket.current = null;
         }
       
         if (!videoSocket.current || videoSocket.current.readyState > 1) {
-          console.log("🔗 Connexion WebSocket vidéo sur chat", chatId);
+          // console.log("🔗 Connexion WebSocket vidéo sur chat", chatId);
           connectVideoSocket();
         }
       
@@ -291,7 +296,7 @@ import React, {
             (videoSocket.current.readyState === WebSocket.OPEN ||
               videoSocket.current.readyState === WebSocket.CONNECTING)
           ) {
-            console.log("🔌 Fermeture WebSocket vidéo pour chat", chatId);
+            // console.log("🔌 Fermeture WebSocket vidéo pour chat", chatId);
             videoSocket.current.close();
             videoSocket.current = null;
           }

@@ -1,6 +1,7 @@
 from app.utils.jwt_handler import create_tokens
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Request, Response
 from app.utils.validators import validate_email, validate_password
 from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username
 import logging
@@ -29,10 +30,10 @@ async def login(request: Request, response: Response):
     # Validation stricte des données
     if not email or not validate_email(email):
         print("ERROR: Invalid email format")  # Email invalide
-        raise HTTPException(status_code=400, detail="Invalid email format")
+        return {"success": False, "detail": "Invalid email format"}
     if not password or not validate_password(password):
         print("ERROR: Password does not meet security requirements")  # Password invalide
-        raise HTTPException(status_code=400, detail="Password does not meet security requirements")
+        return {"success": False, "detail": "Password does not meet security requirements"}
 
     # print("DEBUG: Validations passed. Authenticating user in the database...")  # Authentification
 
@@ -40,14 +41,14 @@ async def login(request: Request, response: Response):
     auth_user = await authenticate_user(email, password)
     if not auth_user:
         # print("ERROR: Invalid credentials")  # Erreur d'authentification
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        return {"success": False, "detail": "Invalid credentials"}
 
-    print(f"DEBUG: User {email} authenticated successfully. Generating JWT token...")  # Authentification réussie
+    # print(f"DEBUG: User {email} authenticated successfully. Generating JWT token...")  # Authentification réussie
     user = await get_user_by_email(email)
-    print(user)
+    # print(user)
     # Vérifier si l'utilisateur est déjà connecté
     if user["status"]:  # Vérifie si le statut est déjà `True`
-        raise HTTPException(status_code=403, detail="User is already logged in")
+        return {"success": False, "detail": "User is already logged in"}
 
     await update_user_status(user["id"], True)
     # user = await get_user_by_email(email)
@@ -74,6 +75,7 @@ async def login(request: Request, response: Response):
     print(f"DEBUG: Token generated and set in cookie for user: {email}")  # Log du token généré
 
     return {
+        "success": True, 
         "id": user["id"],
     }
 
@@ -89,21 +91,21 @@ async def signup(request: Request, response: Response):
 
     # Validation stricte des données
     if not email or not validate_email(email):
-        raise HTTPException(status_code=400, detail="Invalid email format")
+        return {"success": False, "detail": "Invalid email format"}
     if not password or not validate_password(password):
-        raise HTTPException(status_code=400, detail="Password does not meet security requirements")
+        return {"success": False, "detail": "Password does not meet security requirements"}
     if not first_name or not re.match(r"^[a-zA-Z]+$", first_name):
-        raise HTTPException(status_code=400, detail="Invalid first name")
+        return {"success": False, "detail": "Invalid first name"}
     if not last_name or not re.match(r"^[a-zA-Z]+$", last_name):
-        raise HTTPException(status_code=400, detail="Invalid last name")
+        return {"success": False, "detail": "Invalid last name"}
     if not username or not re.match(r"^[a-zA-Z0-9_.-]+$", username):
-        raise HTTPException(status_code=400, detail="Invalid username")
+        return {"success": False, "detail": "Invalid username"}
 
     # Vérifiez si l'utilisateur existe déjà
     existing_user = await get_user_by_email(email)
     existing_username = await get_user_by_username(username)
     if existing_user or existing_username:
-        raise HTTPException(status_code=400, detail="Email or username already exists")
+        return {"success": False, "detail": "Email or username already exists"}
 
     # Hacher le mot de passe
     password_hash = await hash_password(password)
@@ -133,6 +135,7 @@ async def signup(request: Request, response: Response):
     )
 
     return {
+        "success": True,
         "id": user["id"],
     }
 
@@ -151,7 +154,7 @@ async def signup_with_google(request: Request):
 @router.get("/google/picture")
 async def login_with_google(request: Request):
     origin = settings.frontend_origin
-    redirect_uri = f"{origin}auth/google/callback?action=picture"
+    redirect_uri = f"{origin}/auth/google/callback?action=picture"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -179,7 +182,10 @@ async def google_callback(request: Request):
         return await handle_google_picture_upload(request, user_data)
 
     else:
-        raise HTTPException(status_code=400, detail="Invalid or missing action parameter")
+        return {"success": False, "detail": "Invalid or missing action parameter"}
+
+    if isinstance(user, dict) and not user.get("success", True):
+        return user
 
     user_id = user["id"]
 
@@ -191,6 +197,7 @@ async def google_callback(request: Request):
             <script>
                 window.opener.postMessage({{
                     type: "google-auth-success",
+                    success: true,
                     token: "{access_token}"
                 }}, "*");
                 window.close();
@@ -199,7 +206,7 @@ async def google_callback(request: Request):
         </html>
     """
 
-    response = HTMLResponse(content=response_html)
+    response = HTMLResponse(content=response_html, media_type="text/html")
 
     access_token, refresh_token = create_tokens(user_id)
     response.set_cookie(
@@ -222,7 +229,7 @@ async def google_callback(request: Request):
 async def handle_google_signup(email: str, first_name: str, last_name: str, username: str, google_id: str):
     existing_user = await get_user_by_email(email)
     if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
+        return {"success": False, "detail": "User already exists"}
 
     if last_name == "Lastname":
         last_name = first_name
@@ -245,9 +252,9 @@ async def handle_google_signup(email: str, first_name: str, last_name: str, user
 async def handle_google_login(email: str):
     user = await get_user_by_email(email)
     if not user:
-        raise HTTPException(status_code=404, detail="User does not exist")
+        return {"success": False, "detail": "User does not exist"}
     if not await is_oauth_account_linked(email):
-        raise HTTPException(status_code=403, detail="Google account not linked")
+        return {"success": False, "detail": "Google account not linked"}
     if not user["status"]:
         await update_user_status(user["id"], True)
     return user
@@ -255,4 +262,6 @@ async def handle_google_login(email: str):
 @router.get("/me")
 async def get_current_user(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     return {"id": user["id"]}

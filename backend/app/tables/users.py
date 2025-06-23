@@ -17,5 +17,6 @@ users_table = Table(
     Column("created_at", TIMESTAMP(timezone=True), server_default=text("NOW()"), nullable=False),
     # Column("created_at", DateTime, default=datetime.utcnow, nullable=False),
     Column("status", Boolean, default=False, nullable=False),
-    Column("laste_connexion", DateTime, default=datetime.utcnow, nullable=False),
+    Column("laste_connexion", TIMESTAMP(timezone=True), server_default=text("NOW()"), nullable=False),
+    # Column("laste_connexion", DateTime, default=datetime.utcnow, nullable=False),
 )

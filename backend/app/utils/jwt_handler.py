@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from app.config import settings
-from fastapi import Response, HTTPException, Request
+from fastapi import Response, Request
+from fastapi.responses import JSONResponse
 from app.user.user_service import get_user_by_id
 
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -41,13 +42,13 @@ async def verify_user_from_token(request: Request, token_key: str = "access_toke
         dict: Les informations utilisateur si tout est valide.
 
     Raises:
-        HTTPException: Si le token est manquant, invalide ou si l'utilisateur est déconnecté.
+        JSONResponse: Si le token est manquant, invalide ou si l'utilisateur est déconnecté.
     """
     # Récupérer le token depuis les cookies
     token = request.cookies.get(token_key)
     print(token)
     if not token:
-        raise HTTPException(status_code=401, detail=f"Missing {token_key}")
+        return JSONResponse(status_code=401, content={"success": False, "detail": f"Missing {token_key}"})
 
     try:
         # Décoder le token
@@ -56,20 +57,20 @@ async def verify_user_from_token(request: Request, token_key: str = "access_toke
     
         user_id = payload.get("sub")
         if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
+            return JSONResponse(status_code=401, content={"success": False, "detail": "Invalid token payload"})
 
         # Vérifier si l'utilisateur est actif
         user = await get_user_by_id(user_id)
 
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            return JSONResponse(status_code=404, content={"success": False, "detail": "User not found"})
         if not user["status"]:
-            raise HTTPException(status_code=401, detail="User is not online")
+            return JSONResponse(status_code=401, content={"success": False, "detail": "User is not online"})
         # Retourner les informations utilisateur
         return user
     
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return JSONResponse(status_code=401, content={"success": False, "detail": "Invalid or expired token"})
 
 async def verify_user_from_socket_token(token):
     try:
@@ -78,13 +79,13 @@ async def verify_user_from_socket_token(token):
         
         user_id = payload.get("sub")
         if not user_id:
-                raise HTTPException(status_code=401, detail="Invalid token payload")
+                return JSONResponse(status_code=401, content={"success": False, "detail": "Invalid token payload"})
         user = await get_user_by_id(user_id)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            return JSONResponse(status_code=404, content={"success": False, "detail": "User not found"})
         if not user["status"]:
-            raise HTTPException(status_code=401, detail="User is not online")
+            return JSONResponse(status_code=401, content={"success": False, "detail": "User is not online"})
         return user
 
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return JSONResponse(status_code=401, content={"success": False, "detail": "Invalid or expired token"})

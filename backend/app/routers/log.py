@@ -1,6 +1,8 @@
 from app.utils.jwt_handler import create_tokens, verify_user_from_token
 from datetime import timedelta
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
+from app.profile.profile_service import get_profile_by_user_id
 from app.user.user_service import update_user_status
 import logging
 import re
@@ -14,6 +16,8 @@ logger = logging.getLogger(__name__)
 async def refresh_token(request: Request, response: Response):
     print("refresh")
     user = await verify_user_from_token(request, token_key="refresh_token")  # Vérifie le refresh token
+    if isinstance(user, JSONResponse):
+        return user
 
     # Générer un nouveau access token
     access_token, _ = create_tokens(user["id"])
@@ -33,13 +37,13 @@ async def refresh_token(request: Request, response: Response):
 async def get_status(request: Request):
     print("status")
     user = await verify_user_from_token(request)  # Vérifie l'access token
+    if isinstance(user, JSONResponse):
+        return user
     
-    # Check if profile exists
-    has_profile = True
-    try:
-        from app.profile.profile_service import get_profile_by_user_id
-        await get_profile_by_user_id(user["id"])
-    except HTTPException:
+    profile = await get_profile_by_user_id(user["id"])
+    if profile is not None:
+        has_profile = True
+    else:
         has_profile = False
 
     # Return user information with profile status
@@ -53,17 +57,21 @@ async def logout(request: Request, response: Response):
     user_id = request.headers.get("X-User-ID")
     print(user_id)
     if not user_id:
-        raise HTTPException(status_code=400, detail="Missing user ID in headers")
+        return {"success": False, "detail": "Missing user ID in headers"}
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     if str(user["id"]) != user_id:
-        raise HTTPException(status_code=403, detail="User ID does not match authenticated user")
+        return {"success": False, "detail": "User ID does not match authenticated user"}
     await update_user_status(user["id"], False)
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
-    return {"message": "Logged out successfully"}
+    return {"success": True, "message": "Logged out successfully"}
 
 @router.post("/ping")
 async def ping(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     await update_user_status(user["id"], True)
-    return {"message": "pong"}
+    return {"success": True, "message": "pong"}

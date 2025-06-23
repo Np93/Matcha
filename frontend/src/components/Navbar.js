@@ -9,7 +9,8 @@ import {
   ChatBubbleLeftEllipsisIcon,
   Cog6ToothIcon,
   Bars3Icon,
-} from "@heroicons/react/24/solid"; 
+} from "@heroicons/react/24/solid";
+import { showErrorToast } from "../utils/showErrorToast";
 
 const Navbar = () => {
   const { isLoggedIn, userId, logout } = useAuth();
@@ -24,9 +25,9 @@ const Navbar = () => {
   const sendPing = async () => {
     try {
       await secureApiCall("/log/ping", "POST");
-      console.log("📡 Ping envoyé au serveur");
+      // console.log("📡 Ping envoyé au serveur");
     } catch (err) {
-      console.warn("Erreur lors du ping :", err);
+      showErrorToast("Erreur lors du ping");
     }
   };
 
@@ -38,15 +39,15 @@ const Navbar = () => {
   
     // Si la socket est déjà connectée pour ce user et toujours ouverte, on ne fait rien
     if (isSocketOpen && connectedUserId.current === userId) {
-      console.log("⚠️ WebSocket déjà connectée pour cet utilisateur");
+      // console.log("⚠️ WebSocket déjà connectée pour cet utilisateur");
       return;
     }
   
-    console.log("🧠 Ouverture d'une nouvelle WebSocket pour user:", userId);
+    // console.log("🧠 Ouverture d'une nouvelle WebSocket pour user:", userId);
   
     // Si une ancienne socket existe, on la ferme proprement
     if (socket.current) {
-      console.log("🔌 Fermeture de l'ancienne socket...");
+      // console.log("🔌 Fermeture de l'ancienne socket...");
       socket.current.close();
       socket.current = null;
       connectedUserId.current = null;
@@ -58,20 +59,20 @@ const Navbar = () => {
     connectedUserId.current = userId;
   
     newSocket.onopen = () => {
-      console.log("✅ WebSocket connectée !");
+      // console.log("✅ WebSocket connectée !");
     };
   
     newSocket.onmessage = (event) => {
-      console.log("📩 Notification reçue :", event.data);
+      // console.log("📩 Notification reçue :", event.data);
       setUnreadCount((prev) => prev + 1);
     };
   
     newSocket.onerror = (error) => {
-      console.error("❌ Erreur WebSocket :", error);
+      // console.error("❌ Erreur WebSocket :", error);
     };
   
     newSocket.onclose = (event) => {
-      console.warn("⚠️ WebSocket fermée :", event.reason);
+      // console.warn("⚠️ WebSocket fermée :", event.reason);
       if (socket.current === newSocket) {
         connectedUserId.current = null;
         socket.current = null;
@@ -79,7 +80,7 @@ const Navbar = () => {
     };
   
     return () => {
-      console.log("🧹 Cleanup socket...");
+      // console.log("🧹 Cleanup socket...");
       if (socket.current === newSocket) {
         newSocket.close();
         socket.current = null;
@@ -109,7 +110,7 @@ const Navbar = () => {
         const response = await secureApiCall("/notifications/notifications");
         setUnreadCount(response.filter((n) => !n.is_read).length);
       } catch (error) {
-        console.error("Erreur lors de la récupération des notifications :", error);
+        // console.error("Erreur lors de la récupération des notifications :", error);
       }
     };
     fetchUnreadCount();
@@ -124,12 +125,12 @@ const Navbar = () => {
   //  Déconnexion
   const handleLogout = async () => {
     try {
-      console.log("User ID during logout:", userId);
+      // console.log("User ID during logout:", userId);
       await secureApiCall("/log/logout", "POST", null, userId);
       logout();
       navigate("/");
     } catch (error) {
-      console.error("Logout failed:", error);
+      // console.error("Logout failed:", error);
     }
   };
 

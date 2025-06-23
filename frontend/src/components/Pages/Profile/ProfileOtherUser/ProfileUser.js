@@ -14,6 +14,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import LikeButton from "./utils/LikeUnLikeButton";
+import { showErrorToast } from "../../../../utils/showErrorToast";
 
 const ProfileUser = () => {
   const { username } = useParams();
@@ -32,7 +33,7 @@ const ProfileUser = () => {
         setProfileData(response);
         setCanLike(response.can_like);
       } catch (error) {
-        console.error("Failed to fetch user profile:", error);
+        showErrorToast("Failed to fetch user profile:");
       }
     };
 
@@ -41,39 +42,42 @@ const ProfileUser = () => {
 
   const formatLastConnexion = (dateString) => {
     if (!dateString) return "Unknown";
-    console.log(dateString)
+
     const date = new Date(dateString);
     const now = new Date();
     const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
-    const optionsTime = { hour: "2-digit", minute: "2-digit" };
-    const optionsDate = { day: "2-digit", month: "long", year: "numeric" };
-    const optionsDay = { weekday: "long", hour: "2-digit", minute: "2-digit" };
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // <- fuseau du navigateur
+
+    const optionsTime = { hour: "2-digit", minute: "2-digit", timeZone };
+    const optionsDate = { day: "2-digit", month: "long", year: "numeric", timeZone };
+    const optionsDay = { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone };
 
     if (diffInDays === 0) {
-      return `Today at ${date.toLocaleTimeString([], optionsTime)}`;
+      return `Today at ${date.toLocaleTimeString("fr-FR", optionsTime)}`;
     } else if (diffInDays < 7) {
-      return `${date.toLocaleDateString([], optionsDay)}`;
+      return `${date.toLocaleDateString("fr-FR", optionsDay)}`;
     } else {
-      return date.toLocaleDateString([], optionsDate);
+      return date.toLocaleDateString("fr-FR", optionsDate);
     }
   };
 
   const handleReportFake = async () => {
     try {
       await secureApiCall("/profile/report", "POST", { userId, targetId: profileId });
-      alert("User has been reported for fake account.");
+      showErrorToast("User has been reported for fake account.");
     } catch (error) {
-      console.error("Report failed:", error);
+      showErrorToast("Report failed:");
     }
   };
 
   const handleBlockUser = async () => {
     try {
       await secureApiCall("/profile/block", "POST", { userId, targetId: profileId });
-      alert("User has been blocked.");
+      showErrorToast("User has been blocked.");
     } catch (error) {
-      console.error("Block failed:", error);
+      showErrorToast("Block failed:");
+      showErrorToast("Block failed:")
     }
   };
 
@@ -110,6 +114,25 @@ const ProfileUser = () => {
           ? "🟢 Online"
           : `🔴 Last seen ${formatLastConnexion(profileData.laste_connexion)}`}
       </p>
+
+      {/* Match status */}
+      {profileData.unlike ? (
+        <p className="text-red-400 font-semibold text-sm mt-1">
+          💔 You have unliked this user
+        </p>
+      ) : profileData.is_match ? (
+        <p className="text-green-400 font-semibold text-sm mt-1">
+          ✅ It's a Match!
+        </p>
+      ) : profileData.liked ? (
+        <p className="text-pink-400 text-sm mt-1">
+          ❤️ You liked this user
+        </p>
+      ) : (
+        <p className="text-gray-400 text-sm mt-1">
+          🤍 You haven't liked this user yet
+        </p>
+      )}
 
       {/* Boutons d'action */}
       <div className="flex space-x-4 mt-4">

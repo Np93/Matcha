@@ -5,6 +5,7 @@ import DatePicker from "react-datepicker";
 import { getUserLocation } from "../../../utils/getLocation";
 import { useAuth } from "../../../context/AuthContext";
 import "react-datepicker/dist/react-datepicker.css";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 const predefinedInterests = [
   "Vegan", "Geek", "Music", "Travel", "Sport", "Photography",
@@ -13,7 +14,7 @@ const predefinedInterests = [
 
 const CompleteProfile = () => {
   const [gender, setGender] = useState("");
-  const [sexualPreferences, setSexualPreferences] = useState("");
+  const [sexualPreferences, setSexualPreferences] = useState("bisexual");
   const [biography, setBiography] = useState("");
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [customInterest, setCustomInterest] = useState("");
@@ -26,9 +27,9 @@ const CompleteProfile = () => {
     useEffect(() => {
       getUserLocation()
         .then(setLocation)
-        .catch((err) => console.error("Erreur localisation:", err));
+        .catch((err) => showErrorToast("Erreur localisation"));
     }, []);
-    console.log("la localisation avce nouvelle metohode ", location)
+    // console.log("la localisation avce nouvelle metohode ", location)
     // Gérer la sélection/désélection d'un intérêt
     const toggleInterest = (interest) => {
       setSelectedInterests((prev) =>
@@ -51,7 +52,7 @@ const CompleteProfile = () => {
 
     // Vérifier que les champs obligatoires sont remplis
     if (!gender || !sexualPreferences || !birthday) {
-      alert("Please fill in all required fields (Gender, Sexual Preferences, and Birthday).");
+      showErrorToast("Please fill in all required fields (Gender, Sexual Preferences, and Birthday).");
       return;
     }
 
@@ -71,11 +72,11 @@ const CompleteProfile = () => {
       // Update auth context to indicate the profile is now complete
       updateAuthContext({ id: response.id, has_profile: true });
       
-      alert("Profile completed successfully!");
+      showErrorToast("Profile completed successfully!");
       navigate("/profile"); // Redirige vers la page profil
     } catch (error) {
-      console.error("Failed to complete profile:", error);
-      alert(error.message);
+      // console.error("Failed to complete profile:", error);
+      showErrorToast("Failed to complete profile");
     }
   };
 

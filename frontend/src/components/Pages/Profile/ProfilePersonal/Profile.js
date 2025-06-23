@@ -25,11 +25,11 @@ const Profile = () => {
         setProfileData(response);
         updateAuthContext({...response, has_profile: true});
       } catch (error) {
-        console.error("Failed to fetch profile data:", error);
+        // console.error("Failed to fetch profile data:", error);
         
         // If error is 401 (not authorized) or 404 (not found), profile may not exist
         if (error.status === 401 || error.status === 404) {
-          console.log("Profile not found, redirecting to complete-profile");
+          // console.log("Profile not found, redirecting to complete-profile");
           // Update auth context to indicate profile is not complete
           updateAuthContext({id: error.userId, has_profile: false});
           navigate("/complete-profile");

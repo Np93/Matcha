@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../../../utils/api";
 import NotificationItem from "./utils/NotificationItem";
 import NotificationModal from "./utils/NotificationModal";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -20,7 +21,7 @@ const NotificationsPage = () => {
           });
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération des notifications :", error);
+        showErrorToast("Erreur lors de la récupération des notifications");
       }
     };
 

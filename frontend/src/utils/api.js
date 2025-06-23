@@ -1,4 +1,5 @@
 import axios from "axios";
+import { showErrorToast } from "../utils/showErrorToast";
 
 const API_URL = "/api";
 
@@ -8,45 +9,37 @@ export const apiCall = async (url, method, body) => {
       url: `${API_URL}${url}`,
       method,
       data: body,
-      withCredentials: true, // Inclut automatiquement les cookies
+      withCredentials: true,
       headers: {
         "Content-Type": "application/json",
       },
     });
 
+    if (response.data?.success === false) {
+      showErrorToast(response.data.detail || "Unknown error");
+      throw new Error(response.data.detail || "Unknown error");
+    }
+
     return response.data;
   } catch (error) {
-    console.error("API call failed:", error);
-    throw new Error(error.response?.data?.detail || "API call failed");
+    // Cas où ce n’est pas un succès contrôlé mais une vraie erreur réseau
+    showErrorToast(error);
+    throw new Error(error.response?.data?.detail|| "API call failed");
   }
 };
 
-// Configurer Axios pour inclure les cookies dans toutes les requêtes
 axios.defaults.withCredentials = true;
 
-const buildHeaders = () => {
-  const hdrs = {};
+export const secureApiCall = async (url, method = "GET", body = null, userId = null) => {
+  const headers = {};
   if (!(body instanceof FormData)) {
-    hdrs["Content-Type"] = "application/json";
+    headers["Content-Type"] = "application/json";
   }
   if (userId) {
-    hdrs["X-User-ID"] = userId;
+    headers["X-User-ID"] = userId;
   }
-  return hdrs;
-};
 
-// Requête sécurisée pour les données protégées
-export const secureApiCall = async (url, method = "GET", body = null, userId = null) => {
   try {
-    const headers = {};
-    // Si body n'est PAS un FormData, ajoute Content-Type JSON
-    if (!(body instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-    }
-    if (userId) {
-      headers["X-User-ID"] = userId;
-    }
-
     const response = await axios({
       url: `${API_URL}${url}`,
       method,
@@ -54,6 +47,12 @@ export const secureApiCall = async (url, method = "GET", body = null, userId = n
       headers,
       withCredentials: true,
     });
+
+    if (response.data?.success === false) {
+      showErrorToast(response.data.detail || "Unknown error");
+      throw new Error(response.data.detail || "Unknown error");
+    }
+
     return response.data;
   } catch (error) {
     if (error.response?.status === 401) {
@@ -63,18 +62,23 @@ export const secureApiCall = async (url, method = "GET", body = null, userId = n
           url: `${API_URL}${url}`,
           method,
           data: body,
-          headers: buildHeaders(),
+          headers,
           withCredentials: true,
         });
+
+        if (retryResponse.data?.success === false) {
+          showErrorToast(retryResponse.data.detail || "Unknown error");
+          throw new Error(retryResponse.data.detail || "Unknown error");
+        }
+
         return retryResponse.data;
       } catch (refreshError) {
+        showErrorToast("Session expired. Please log in again.");
         throw new Error("Session expired. Please log in again.");
       }
     } else {
+      showErrorToast(error);
       throw new Error(error.response?.data?.detail || "Request failed");
     }
   }
 };
-
-// Exemple d'appel API sécurisé
-export const getProfileData = () => secureApiCall("/auth/profile");

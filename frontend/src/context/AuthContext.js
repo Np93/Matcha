@@ -12,10 +12,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const response = await secureApiCall("/log/status"); // Vérifie si le token est valide
-        setIsLoggedIn(true);
-        setUserId(response.id);
-        setHasProfile(response.has_profile);
+        if (document.cookie !== "") {
+          const response = await secureApiCall("/log/status"); // Vérifie si le token est valide
+          setIsLoggedIn(true);
+          setUserId(response.id);
+          setHasProfile(response.has_profile);
+        }
       } catch (error) {
         setIsLoggedIn(false);
         setUserId(null);

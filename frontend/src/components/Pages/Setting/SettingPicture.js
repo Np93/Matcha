@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import imageCompression from "browser-image-compression";
 import { secureApiCall } from "../../../utils/api";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -18,7 +19,7 @@ const ProfilePicture = () => {
       const response = await secureApiCall("/setting/get_pictures", "GET");
       setPictures(response); // response = [{id, image_data}]
     } catch (err) {
-      console.error("Erreur lors du chargement des photos :", err);
+      showErrorToast("Erreur lors du chargement des photos");
       setError("Failed to load pictures.");
     }
   };
@@ -51,7 +52,7 @@ const ProfilePicture = () => {
       setError(null);
       fetchPictures(); // refresh
     } catch (err) {
-      console.error("Erreur upload :", err);
+      showErrorToast("Erreur upload");
       setError("Upload failed or maximum number of pictures reached.");
     }
   };
@@ -74,7 +75,7 @@ const ProfilePicture = () => {
       setSelected([]);
       fetchPictures();
     } catch (err) {
-      console.error("Erreur suppression :", err);
+      showErrorToast("Erreur suppression");
       setError("Failed to delete pictures.");
     }
   };
@@ -85,7 +86,7 @@ const ProfilePicture = () => {
       setError(null);
       fetchPictures(); // Refresh pour mettre à jour le drapeau
     } catch (err) {
-      console.error("Erreur set main :", err);
+      showErrorToast("Erreur set main");
       setError("Failed to set main picture.");
     }
   };

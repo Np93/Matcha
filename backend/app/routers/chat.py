@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from app.utils.jwt_handler import verify_user_from_token, verify_user_from_socket_token
 from app.profile.block_service import are_users_blocked
 from app.routers.notifications import send_notification
+from fastapi.responses import JSONResponse
 from app.chat.chat_service import (
     get_user_conversations_from_db, get_messages_from_conversation, get_conversation_users, insert_message,
     insert_date_invite, get_latest_invite, update_invite_status,
@@ -17,6 +18,8 @@ active_connections = {}
 @router.get("/conversations")
 async def get_user_conversations(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     user_id = user["id"]
 
     raw_conversations = await get_user_conversations_from_db(user_id)
@@ -49,7 +52,9 @@ async def get_user_conversations(request: Request):
 
 @router.get("/messages/{conversation_id}")
 async def get_messages(conversation_id: int, request: Request):
-    await verify_user_from_token(request)
+    user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     rows = await get_messages_from_conversation(conversation_id)
     return [
         {
@@ -65,13 +70,15 @@ async def get_messages(conversation_id: int, request: Request):
 @router.post("/send")
 async def send_message(request: Request, data: dict):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     sender_id = user["id"]
     conversation_id = data["chat_id"]
     content = data["content"]
 
     convo = await get_conversation_users(conversation_id)
     if not convo:
-        raise HTTPException(status_code=404, detail="Conversation introuvable")
+        return {"success": False, "detail": "Conversation introuvable"}
 
     receiver_id = convo.user1_id if convo.user2_id == sender_id else convo.user2_id
 
@@ -95,12 +102,12 @@ async def send_message(request: Request, data: dict):
             context=f"{user['username']} vous a envoyé un message."
         )
 
-    return {"message": "Message envoyé"}
+    return {"success": True, "message": "Message envoyé"}
 
 @router.websocket("/ws/{conversation_id}")
 async def websocket_endpoint(websocket: WebSocket, conversation_id: int):
     """ WebSocket sécurisé avec JWT en Cookie HTTPOnly """
-    await websocket.accept()
+    # await websocket.accept()
     token = websocket.cookies.get("access_token")
     if not token:
         await websocket.close(code=1008)  # 1008 : Policy Violation
@@ -113,7 +120,7 @@ async def websocket_endpoint(websocket: WebSocket, conversation_id: int):
     except JWTError:
         await websocket.close(code=1008)
         return
-
+    await websocket.accept()
     active_connections.setdefault(conversation_id, []).append((user["id"], websocket))
 
     try:
@@ -128,6 +135,8 @@ async def websocket_endpoint(websocket: WebSocket, conversation_id: int):
 async def typing_status(request: Request, data: dict):
     """Informe chaque utilisateur dans la conversation si l'autre est en train d'écrire."""
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     sender_id = user["id"]
     conversation_id = data["chat_id"]
     is_typing = data["is_typing"]  # Boolean : True -> Tape, False -> Arrête
@@ -142,14 +151,14 @@ async def typing_status(request: Request, data: dict):
                     "username": user["username"]
                 }))
 
-    return {"message": "Typing status updated"}
+    return {"success": True, "message": "Typing status updated"}
 
 active_video_connections: dict[int, list[tuple[int, WebSocket]]] = {}
 
 @router.websocket("/ws/video/{conversation_id}")
 async def video_websocket(websocket: WebSocket, conversation_id: int):
     print(f"✅ Connexion WebSocket vidéo pour conversation {conversation_id}")
-    await websocket.accept()
+    # await websocket.accept()
     token = websocket.cookies.get("access_token")
     if not token:
         await websocket.close(code=1008)
@@ -160,7 +169,7 @@ async def video_websocket(websocket: WebSocket, conversation_id: int):
     except JWTError:
         await websocket.close(code=1008)
         return
-
+    await websocket.accept()
     user_id = user["id"]
     active_video_connections.setdefault(conversation_id, []).append((user_id, websocket))
     print(f"✅ Video WebSocket ouverte pour user {user_id} dans la conversation {conversation_id}")
@@ -189,18 +198,20 @@ async def video_websocket(websocket: WebSocket, conversation_id: int):
 @router.post("/date_invite")
 async def send_date_invite(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     sender_id = user["id"]
     body = await request.json()
     chat_id = body.get("chat_id")
 
     convo = await get_conversation_users(chat_id)
     if not convo:
-        raise HTTPException(status_code=404, detail="Conversation introuvable")
+        return {"success": False, "detail": "Conversation introuvable"}
 
     latest = await get_latest_invite(chat_id)
 
     if latest and latest.status == "pending":
-        raise HTTPException(status_code=400, detail="Une invitation est déjà en cours")
+        return {"success": False, "detail": "Une invitation est déjà en cours"}
     
     if latest and latest.status == "accepted":
         return {"ok": True}  # autoriser l'ouverture de modale
@@ -222,11 +233,13 @@ async def send_date_invite(request: Request):
             "status": "pending"
         }))
 
-    return {"ok": True}
+    return {"success": True, "ok": True}
 
 @router.post("/date_invite/respond")
 async def respond_to_date_invite(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     user_id = user["id"]
     body = await request.json()
     chat_id = body.get("chat_id")
@@ -234,7 +247,7 @@ async def respond_to_date_invite(request: Request):
 
     invite = await get_latest_invite(chat_id)
     if not invite:
-        raise HTTPException(status_code=404, detail="Aucune invitation trouvée")
+        return {"success": False, "detail": "Aucune invitation trouvée"}
 
     status = "accepted" if accepted else "declined"
     await update_invite_status(chat_id, status)
@@ -255,11 +268,13 @@ async def respond_to_date_invite(request: Request):
             "status": status
         }))
 
-    return {"ok": True}
+    return {"success": True, "ok": True}
 
 @router.post("/date_invite/preferences")
 async def submit_preferences(request: Request):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
     user_id = user["id"]
 
     body = await request.json()
@@ -269,7 +284,7 @@ async def submit_preferences(request: Request):
 
     invite = await get_latest_invite(chat_id)
     if not invite or invite["status"] != "accepted":
-        raise HTTPException(status_code=400, detail="Invitation non acceptée")
+        return {"success": False, "detail": "Invitation non acceptée"}
 
     await save_user_preferences(chat_id, user_id, moments, activities)
 
@@ -321,11 +336,13 @@ async def submit_preferences(request: Request):
             "message": message
         }))
 
-    return {"ok": True}
+    return {"success": True, "ok": True}
 
 @router.get("/date_invite/status")
 async def get_date_invite_status(request: Request, chat_id: int):
     user = await verify_user_from_token(request)
+    if isinstance(user, JSONResponse):
+        return user
 
     # On utilise .mappings() dans la fonction appelée
     invite = await get_latest_invite(chat_id)

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { secureApiCall } from "../../../utils/api";
 import { getUserLocation } from "../../../utils/getLocation";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 const LocationSettings = () => {
   const [location, setLocation] = useState({
@@ -17,7 +18,7 @@ const LocationSettings = () => {
   const [citySuggestions, setCitySuggestions] = useState([]); // Suggestions de villes
   const [countrySuggestions, setCountrySuggestions] = useState([]); // Suggestions de pays
 
-  // 🟡 Charger la localisation actuelle depuis le backend
+  // Charger la localisation actuelle depuis le backend
   useEffect(() => {
     const fetchLocation = async () => {
       try {
@@ -33,7 +34,7 @@ const LocationSettings = () => {
     fetchLocation();
   }, []);
 
-  // 🟠 Récupérer les suggestions de pays
+  // Récupérer les suggestions de pays
   const fetchCountrySuggestions = async (input) => {
     if (input.length < 2) {
       setCountrySuggestions([]);
@@ -56,7 +57,7 @@ const LocationSettings = () => {
     }
   };
 
-  // 🟠 Récupérer les suggestions de villes
+  // Récupérer les suggestions de villes
   const fetchCitySuggestions = async (input, country) => {
     if (input.length < 3 || !country) {
       setCitySuggestions([]);
@@ -80,12 +81,12 @@ const LocationSettings = () => {
         setCitySuggestions([]);
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération des suggestions de ville:", error);
+      showErrorToast("Erreur lors de la récupération des suggestions de ville");
       setCitySuggestions([]);
     }
   };
 
-  // 📍 Récupérer latitude et longitude pour une ville donnée
+  // Récupérer latitude et longitude pour une ville donnée
   const fetchCoordinatesForCity = async (city, country) => {
     try {
       const response = await fetch(
@@ -103,7 +104,7 @@ const LocationSettings = () => {
         };
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération des coordonnées :", error);
+      showErrorToast("Erreur lors de la récupération des coordonnées");
     }
 
     return { latitude: null, longitude: null };
@@ -127,18 +128,11 @@ const LocationSettings = () => {
       setCitySuggestions([]);
       setMapEnabled(false);
     } catch (error) {
-      console.error("Erreur lors de la sélection de la ville :", error);
+      showErrorToast("Erreur lors de la sélection de la ville");
     }
   };
 
-  // 🟢 Sélectionner une suggestion de ville
-//   const handleSelectCity = (city) => {
-//     setLocation({ ...location, city, locationMethod: "IP" });
-//     setCitySuggestions([]);
-//     setMapEnabled(false);
-//   };
-
-  // 🟢 Sélectionner une suggestion de pays
+  // Sélectionner une suggestion de pays
   const handleSelectCountry = (country) => {
     setLocation({ ...location, country, locationMethod: "IP", city: "" });
     setCountrySuggestions([]);
@@ -146,7 +140,7 @@ const LocationSettings = () => {
     setMapEnabled(false);
   };
 
-  // 🟢 Récupérer la localisation GPS
+  // Récupérer la localisation GPS
   const handleGetPreciseLocation = async () => {
     setLoading(true);
     try {
@@ -160,14 +154,14 @@ const LocationSettings = () => {
     }
   };
 
-  // 🟢 Envoyer la localisation mise à jour au backend
+  // Envoyer la localisation mise à jour au backend
   const handleUpdateLocation = async (e) => {
     e.preventDefault();
     setLoading(true);
-    console.log("📤 Données envoyées au backend :", {
-      ...location,
-      mapEnabled,
-    });
+    // console.log("📤 Données envoyées au backend :", {
+    //   ...location,
+    //   mapEnabled,
+    // });
 
     try {
       await secureApiCall("/setting/location/update", "POST", {
@@ -183,103 +177,116 @@ const LocationSettings = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-900 text-white max-w-xl mx-auto rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-red-500 text-center mb-4">Location Settings</h2>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-4 py-10 flex items-center justify-center">
+      <div className="w-full max-w-2xl bg-white bg-opacity-10 backdrop-blur-md text-white rounded-2xl shadow-2xl p-6 sm:p-10">
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-center text-red-400 mb-6 drop-shadow-lg">
+          Location Settings
+        </h2>
 
-      {loading && <p className="text-gray-400">Chargement...</p>}
-      {error && <p className="text-red-400">{error}</p>}
+        {loading && <p className="text-gray-300 text-center">Chargement...</p>}
+        {error && <p className="text-red-400 text-center">{error}</p>}
 
-      {/* 🟢 Formulaire pour modifier la ville et le pays */}
-      <form onSubmit={handleUpdateLocation} className="space-y-4">
-        {/* Pays */}
-        <div>
-          <label className="block text-white">Country:</label>
-          <input
-            type="text"
-            value={location.country}
-            onChange={(e) => {
-              setLocation({ ...location, country: e.target.value, locationMethod: "IP", city: "" });
-              fetchCountrySuggestions(e.target.value);
-              setMapEnabled(false);
-            }}
-            className="w-full p-2 text-black rounded-md"
-            required
-          />
-          {/* 🔽 Suggestions de pays */}
-          {countrySuggestions.length > 0 && (
-            <ul className="bg-white text-black rounded-md mt-1 shadow-lg">
-              {countrySuggestions.map((c, index) => (
-                <li
-                  key={index}
-                  className="p-2 hover:bg-gray-200 cursor-pointer"
-                  onClick={() => handleSelectCountry(c)}
-                >
-                  {c}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <form onSubmit={handleUpdateLocation} className="space-y-6">
+          {/* Country */}
+          <div>
+            <label className="block mb-2 text-sm font-semibold">Country</label>
+            <input
+              type="text"
+              value={location.country}
+              onChange={(e) => {
+                setLocation({
+                  ...location,
+                  country: e.target.value,
+                  locationMethod: "IP",
+                  city: "",
+                });
+                fetchCountrySuggestions(e.target.value);
+                setMapEnabled(false);
+              }}
+              className="w-full p-3 text-black rounded-lg shadow-inner focus:ring-2 focus:ring-red-400"
+              placeholder="Enter country"
+              required
+            />
+            {countrySuggestions.length > 0 && (
+              <ul className="bg-white text-black rounded-lg mt-2 shadow-lg max-h-48 overflow-y-auto border border-gray-300">
+                {countrySuggestions.map((c, i) => (
+                  <li
+                    key={i}
+                    className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                    onClick={() => handleSelectCountry(c)}
+                  >
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-        {/* Ville */}
-        <div>
-          <label className="block text-white">City:</label>
-          <input
-            type="text"
-            value={location.city}
-            onChange={(e) => {
+          {/* City */}
+          <div>
+            <label className="block mb-2 text-sm font-semibold">City</label>
+            <input
+              type="text"
+              value={location.city}
+              onChange={(e) => {
                 const newCity = e.target.value;
                 setLocation({ ...location, city: newCity, locationMethod: "IP" });
                 fetchCitySuggestions(newCity, location.country);
                 setMapEnabled(false);
               }}
-            className="w-full p-2 text-black rounded-md"
-            required
-          />
-          {/* 🔽 Suggestions de villes */}
-          {citySuggestions.length > 0 && (
-            <ul className="bg-white text-black rounded-md mt-1 shadow-lg">
-              {citySuggestions.map((city, index) => (
-                <li
-                  key={index}
-                  className="p-2 hover:bg-gray-200 cursor-pointer"
-                  onClick={() => handleSelectCity(city)}
-                >
-                  {city}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+              className="w-full p-3 text-black rounded-lg shadow-inner focus:ring-2 focus:ring-red-400"
+              placeholder="Enter city"
+              required
+            />
+            {citySuggestions.length > 0 && (
+              <ul className="bg-white text-black rounded-lg mt-2 shadow-lg max-h-48 overflow-y-auto border border-gray-300">
+                {citySuggestions.map((city, i) => (
+                  <li
+                    key={i}
+                    className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                    onClick={() => handleSelectCity(city)}
+                  >
+                    {city}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-        {/* Bouton Update */}
+          {/* Update Button */}
+          <button
+            type="submit"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-red-500 hover:bg-red-600 rounded-full text-white font-bold text-lg shadow-lg transition duration-200"
+          >
+            Update Location
+          </button>
+        </form>
+
+        {/* GPS Button */}
         <button
-          type="submit"
-          className="w-full py-2 bg-red-600 rounded-lg hover:bg-red-700"
+          onClick={handleGetPreciseLocation}
+          className="w-full flex items-center justify-center gap-2 mt-6 py-3 bg-green-500 hover:bg-green-600 rounded-full text-white font-bold text-lg shadow-lg transition duration-200"
+          disabled={location.locationMethod === "GPS"}
         >
-          Update Location
+          {location.locationMethod === "GPS" ? "Active Precise Location" : "Use GPS Location"}
         </button>
-      </form>
 
-      {/* 🟢 Bouton pour récupérer la localisation GPS */}
-      <button
-        onClick={handleGetPreciseLocation}
-        className="w-full mt-4 py-2 bg-green-600 rounded-lg hover:bg-green-700"
-        disabled={location.locationMethod === "GPS"}
-      >
-        {location.locationMethod === "GPS" ? "Precise Location Active" : "Use Precise GPS Location"}
-      </button>
-
-      {/* 🟠 Activer/Désactiver la Map (Seulement si mode GPS) */}
-      <div className="flex items-center justify-between mt-4">
-        <span className="text-white">Enable Map:</span>
-        <input
-          type="checkbox"
-          checked={mapEnabled}
-          onChange={() => setMapEnabled(!mapEnabled)}
-          disabled={location.locationMethod !== "GPS"}
-          className="w-5 h-5"
-        />
+        {/* Enable Map Switch */}
+        <div className="flex items-center justify-between mt-6">
+          <span className="text-sm font-medium">Enable Map View</span>
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={mapEnabled}
+              onChange={() => setMapEnabled(!mapEnabled)}
+              disabled={location.locationMethod !== "GPS"}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-500 rounded-full peer peer-checked:bg-green-500 transition-all relative">
+              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+            </div>
+          </label>
+        </div>
       </div>
     </div>
   );

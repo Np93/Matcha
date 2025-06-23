@@ -5,6 +5,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 import VideoCall from "./utils/VideoCall";
 import DatePlanner from "./utils/DatePlanner";
+import { showErrorToast } from "../../../utils/showErrorToast";
 
 const Chat = () => {
   const { userId } = useAuth();
@@ -41,7 +42,7 @@ const Chat = () => {
         const response = await secureApiCall("/chat/conversations");
         setConversations(response);
       } catch (error) {
-        console.error("Erreur conversations :", error);
+        showErrorToast("Erreur conversations");
       }
     };
     fetchConversations();
@@ -81,7 +82,7 @@ const Chat = () => {
             }
           }
         } catch (error) {
-          console.error("Erreur récupération messages/statut :", error);
+          showErrorToast("Erreur récupération messages/statut");
         }
       };
 
@@ -92,6 +93,11 @@ const Chat = () => {
   }, [selectedChat]);
 
   const connectWebSocket = (chatId) => {
+    if (!chatId) {
+      // console.warn("⛔ Tentative de WebSocket sans utilisateur connecté ou chatId invalide");
+      return;
+    }
+
     if (socket.current) socket.current.close();
     socket.current = new WebSocket(`wss://${window.location.host}/chat/ws/${chatId}`);
     socket.current.onmessage = (event) => {
@@ -130,7 +136,7 @@ const Chat = () => {
       scrollToBottom();
       notifyTyping(false);
     } catch (err) {
-      console.error("Erreur envoi message :", err);
+      showErrorToast("Erreur envoi message");
     }
   };
 
@@ -141,7 +147,7 @@ const Chat = () => {
         is_typing: isTyping,
       });
     } catch (err) {
-      console.error("Erreur typing :", err);
+      showErrorToast("Erreur typing");
     }
   };
 
@@ -242,7 +248,7 @@ const Chat = () => {
                           setLatestDateStatus(statusRes.status);
                         }
                       } else {
-                        console.error("Erreur invitation date :", err);
+                        showErrorToast("Erreur invitation date");
                       }
                     }
                   }}
