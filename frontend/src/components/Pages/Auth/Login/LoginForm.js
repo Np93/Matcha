@@ -8,16 +8,23 @@ import { showErrorToast } from "../../../../utils/showErrorToast";
 const API_URL = "/api";
 
 const LoginForm = () => {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const { updateAuthContext } = useAuth(); // Récupère la fonction de connexion depuis le contexte
-    const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const { updateAuthContext } = useAuth();
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const validateUsername = (value) => /^[a-zA-Z0-9_.-]+$/.test(value);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateUsername(username)) {
+      alert("Invalid username. Only letters, numbers, _, ., and - are allowed.");
+      return;
+    }
     try {
         const response = await apiCall("/auth/login", "POST", {
-          email,
+          username,
           password,
         });
       // console.log(response);
@@ -94,16 +101,17 @@ const LoginForm = () => {
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           <div>
-            <label className="block text-gray-300 mb-1 sm:mb-2">Email:</label>
+            <label className="block text-gray-300 mb-1 sm:mb-2">Username:</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               className="w-full px-3 sm:px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="Enter your username"
             />
           </div>
-          <div>
+          {/* <div>
             <label className="block text-gray-300 mb-1 sm:mb-2">Password:</label>
             <input
               type="password"
@@ -111,7 +119,28 @@ const LoginForm = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full px-3 sm:px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="Enter your password"
             />
+          </div> */}
+          <div>
+            <label className="block text-gray-300 mb-1 sm:mb-2">Password:</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Enter your Password"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute top-1/2 right-2 transform -translate-y-1/2 text-sm text-gray-400"
+              >
+                {showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
           </div>
           <button
             type="submit"
@@ -144,7 +173,7 @@ const LoginForm = () => {
             alt="Google"
             className="w-5 h-5"
           />
-          <span className="font-medium">Sign up with Google</span>
+          <span className="font-medium">Sign in with Google</span>
         </button>
       </div>
     </div>

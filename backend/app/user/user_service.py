@@ -2,6 +2,7 @@ from datetime import datetime
 from app.utils.database import engine
 from bcrypt import hashpw, gensalt, checkpw
 from sqlalchemy.sql import text
+from fastapi import HTTPException
 
 async def hash_password(password: str) -> str:
     """Hache le mot de passe pour le stockage."""
@@ -61,10 +62,27 @@ async def get_user_by_username(username: str):
     return dict(user._mapping) if user else None
 
 async def authenticate_user(email: str, password: str) -> bool:
-    """Vérifie les informations d'identification de l'utilisateur."""
+    """Vérifie les informations d'identification via email."""
     user = await get_user_by_email(email)
     if not user:
         return False
+    if not user.get("password_hash"):
+        raise HTTPException(
+            status_code=403,
+            detail="This account was created with Google. Please log in using Google."
+        )
+    return checkpw(password.encode('utf-8'), user["password_hash"].encode('utf-8'))
+
+async def authenticate_user_by_username(username: str, password: str) -> bool:
+    """Vérifie les informations d'identification via username."""
+    user = await get_user_by_username(username)
+    if not user:
+        return False
+    if not user.get("password_hash"):
+        raise HTTPException(
+            status_code=403,
+            detail="This account was created with Google. Please log in using Google."
+        )
     return checkpw(password.encode('utf-8'), user["password_hash"].encode('utf-8'))
 
 async def save_profile_picture(user_id: int, image_bytes: bytes):

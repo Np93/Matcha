@@ -48,8 +48,6 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-            {/* ... autres routes */}
-            {/* <Route path="/oauth-success" element={<OAuthSuccess />} /> */}
             <Route
               path="/profile"
               element={<ProtectedRoute element={Profile} />}
