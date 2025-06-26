@@ -80,10 +80,7 @@ async def authenticate_user_by_username(username: str, password: str) -> bool:
     if not user:
         return False
     if not user.get("password_hash"):
-        raise HTTPException(
-            status_code=403,
-            detail="This account was created with Google. Please log in using Google."
-        )
+        return None
     return checkpw(password.encode('utf-8'), user["password_hash"].encode('utf-8'))
 
 async def save_profile_picture(user_id: int, image_bytes: bytes):

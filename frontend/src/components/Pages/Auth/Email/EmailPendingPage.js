@@ -15,7 +15,7 @@ export default function EmailPendingPage() {
         if (res.success && res.email_verified === true) {
         //   console.log("val de res.success: ", res.success)
         //   console.log("val dans res.email_verified: ", res.email_verified)
-          updateAuthContext({ id: res.id, has_profile: false, email_verified: true });
+          updateAuthContext({ id: res.id, has_profile: false, email_verified: res.email_verified });
           navigate("/complete-profile");
         //   console.log("true true de mon cul ouaiche")
         }

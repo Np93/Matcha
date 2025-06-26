@@ -42,8 +42,10 @@ async def login(request: Request, response: Response):
     # Authentifier l'utilisateur via la base de données
     auth_user = await authenticate_user_by_username(username, password)
     if not auth_user:
-        # print("ERROR: Invalid credentials")  # Erreur d'authentification
-        return {"success": False, "detail": "Invalid credentials"}
+        if auth_user is None:
+            return { "success": False, "detail": "This account was created with Google. Please log in using Google." }
+        elif auth_user is False:
+            return { "success": False, "detail": "Invalid credentials." }
 
     # # print(f"DEBUG: User {email} authenticated successfully. Generating JWT token...")  # Authentification réussie
     user = await get_user_by_username(username)
@@ -158,6 +160,7 @@ async def check_email_verification(request: Request):
     user_data = await get_user_by_id(user["id"])
     return {
         "success": True,
+        "id": user_data["id"],
         "email_verified": user_data["email_verified"]
     }
 
