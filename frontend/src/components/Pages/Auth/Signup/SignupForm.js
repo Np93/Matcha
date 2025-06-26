@@ -35,10 +35,11 @@ const SignupForm = () => {
         last_name: lastName,
         username,
       });
-      updateAuthContext({...response, has_profile: false});
-      navigate("/complete-profile");
+      updateAuthContext({...response, has_profile: false, email_verified: false});
+      // navigate("/complete-profile");
+      navigate("/email-pending");
     } catch (error) {
-      // showErrorToast(error);
+      showErrorToast(error);
       // alert(error.message);
     }
   };
@@ -65,7 +66,7 @@ const SignupForm = () => {
         try {
           const response = await apiCall("/auth/me", "GET");
           // Always set has_profile to false for new sign ups
-          updateAuthContext({...response, has_profile: false});
+          updateAuthContext({...response, has_profile: false, email_verified: true});
           navigate("/complete-profile");
         } catch (error) {
           showErrorToast(error);

@@ -1,14 +1,16 @@
 from app.utils.jwt_handler import create_tokens
-from datetime import timedelta
+from datetime import timedelta, datetime
+from fastapi.responses import RedirectResponse
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Request, Response
 from app.utils.validators import validate_email, validate_password
-from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username
+from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username, get_user_by_id
 import logging
 import re
 from app.config import settings
 from app.tables.oauth import oauth
 from fastapi.responses import HTMLResponse
+from app.email.email_service import send_verification_email, save_email_verification_token, get_verification_token_info, mark_email_verified, delete_email_verification_entry
 from app.utils.jwt_handler import verify_user_from_token
 from app.user.oauth_service import is_oauth_account_linked, link_oauth_account, handle_google_picture_upload
 
@@ -47,8 +49,8 @@ async def login(request: Request, response: Response):
     user = await get_user_by_username(username)
     # print(user)
     # Vérifier si l'utilisateur est déjà connecté
-    if user["status"]:  # Vérifie si le statut est déjà `True`
-        return {"success": False, "detail": "User is already logged in"}
+    # if user["status"]:  # Vérifie si le statut est déjà `True`
+    #     return {"success": False, "detail": "User is already logged in"}
 
     await update_user_status(user["id"], True)
     # user = await get_user_by_email(email)
@@ -111,12 +113,18 @@ async def signup(request: Request, response: Response):
     password_hash = await hash_password(password)
 
     # Ajouter l'utilisateur à la base de données
-    await add_user(email, username, first_name, last_name, password_hash)
+    await add_user(email, username, first_name, last_name, password_hash, email_verified=False)
 
     user = await get_user_by_email(email)
 
     # Création des tokens
     access_token, refresh_token = create_tokens(user["id"])
+
+    expiration_time = await save_email_verification_token(email, access_token)
+    print(f"✅ Token enregistré ! Expire à : {expiration_time}")
+    email_sent = await send_verification_email(email, access_token)
+    if not email_sent:
+        return {"success": False, "detail": "Erreur lors de l'envoi de l'email de vérification."}
 
     # Définir un cookie sécurisé contenant le JWT
     response.set_cookie(
@@ -137,7 +145,38 @@ async def signup(request: Request, response: Response):
     return {
         "success": True,
         "id": user["id"],
+        "email_verified": False,
     }
+
+@router.get("/email_status")
+async def check_email_verification(request: Request):
+    user = await verify_user_from_token(request)
+    print(user)
+    if isinstance(user, JSONResponse):
+        return user
+
+    user_data = await get_user_by_id(user["id"])
+    return {
+        "success": True,
+        "email_verified": user_data["email_verified"]
+    }
+
+@router.get("/confirm_email/{token}")
+async def confirm_email(token: str):
+    """Confirme l'email (appel AJAX)"""
+    try:
+        user_id, expires_at = await get_verification_token_info(token)
+
+        if datetime.utcnow() > expires_at:
+            return {"success": False, "detail": "Token expiré."}
+
+        await mark_email_verified(user_id)
+        await delete_email_verification_entry(user_id)
+
+        return {"success": True, "detail": "Email confirmé."}
+
+    except Exception as e:
+        return {"success": False, "detail": f" Erreur : {str(e)}"}
 
 @router.get("/google/login")
 async def login_with_google(request: Request):
@@ -253,7 +292,8 @@ async def handle_google_signup(email: str, first_name: str, last_name: str, user
         username=unique_username,
         first_name=first_name,
         last_name=last_name,
-        password_hash=None
+        password_hash=None,
+        email_verified=True
     )
 
     user = await get_user_by_email(email)

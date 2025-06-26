@@ -23,7 +23,7 @@ const Profile = () => {
       try {
         const response = await secureApiCall("/profile/");
         setProfileData(response);
-        updateAuthContext({...response, has_profile: true});
+        // updateAuthContext({...response, has_profile: true, email_verified: true});
       } catch (error) {
         // console.error("Failed to fetch profile data:", error);
         
@@ -31,8 +31,8 @@ const Profile = () => {
         if (error.status === 401 || error.status === 404) {
           // console.log("Profile not found, redirecting to complete-profile");
           // Update auth context to indicate profile is not complete
-          updateAuthContext({id: error.userId, has_profile: false});
-          navigate("/complete-profile");
+          // updateAuthContext({id: error.userId, has_profile: false, email_verified: false});
+          // navigate("/complete-profile");
         } else {
           // For other errors, just logout and go to home
           logout();
@@ -42,7 +42,7 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [updateAuthContext, logout, navigate, isLoggedIn]);
+  }, []);
 
   if (!profileData) {
     return <div className="text-white text-center mt-10">Loading profile...</div>;

@@ -19,7 +19,7 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateUsername(username)) {
-      alert("Invalid username. Only letters, numbers, _, ., and - are allowed.");
+      showErrorToast("Invalid username. Only letters, numbers, _, ., and - are allowed.");
       return;
     }
     try {
@@ -33,11 +33,14 @@ const LoginForm = () => {
       const userStatus = await apiCall("/log/status", "GET");
       
       // Update auth context with response and profile status
-      updateAuthContext({...response, has_profile: userStatus.has_profile});
+      // console.log(userStatus)
+      updateAuthContext({...response, has_profile: userStatus.has_profile, email_verified: userStatus.email_verified});
       
       // Redirect to the appropriate page based on profile status
       if (userStatus.has_profile) {
         navigate("/profile");
+      } else if(!userStatus.email_verified) {
+        navigate("/email-pending")
       } else {
         navigate("/complete-profile");
       }
@@ -71,7 +74,7 @@ const LoginForm = () => {
           const userStatus = await apiCall("/log/status", "GET");
           
           // Update auth context with response and profile status
-          updateAuthContext({...response, has_profile: userStatus.has_profile});
+          updateAuthContext({...response, has_profile: userStatus.has_profile, email_verified: userStatus.email_verified});
           
           // Redirect to the appropriate page based on profile status
           if (userStatus.has_profile) {

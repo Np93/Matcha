@@ -12,6 +12,7 @@ from app.tables.profile_pictures import metadata as profile_pictures_metadata
 from app.tables.blocks import metadata as blocks_metadata
 from app.tables.reports import metadata as reports_metadata
 from app.tables.oauth_account import metadata as oauth_accounts_metadata
+from app.tables.email_verification import metadata as email_verification_metadata
 from dotenv import load_dotenv
 import os
 
@@ -80,6 +81,10 @@ for table in reports_metadata.tables.values():
 
 # Ajoute les tables des métadonnées des utilisateurs
 for table in oauth_accounts_metadata.tables.values():
+    table.tometadata(combined_metadata)
+
+# Ajoute les tables des métadonnées des utilisateurs
+for table in email_verification_metadata.tables.values():
     table.tometadata(combined_metadata)
 
 async def create_tables():

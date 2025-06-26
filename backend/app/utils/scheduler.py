@@ -1,7 +1,7 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.profile.profile_service import reset_fame_ratings
-from app.user.user_service import mark_users_offline_if_needed
+from app.user.user_service import mark_users_offline_if_needed, cleanup_unverified_accounts
 
 
 scheduler = AsyncIOScheduler()
@@ -20,6 +20,13 @@ def start_scheduler():
         mark_users_offline_if_needed,
         CronTrigger(minute="*/5"),  # Toutes les 5 minutes
         name="Mark users offline if inactive for 30min",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        cleanup_unverified_accounts,
+        CronTrigger(minute="*/10"),  # Toutes les 10 minutes
+        name="Supprimer les comptes non confirmés apres 5 min",
         replace_existing=True,
     )
     scheduler.start()
