@@ -7,6 +7,9 @@ import Signup from "./components/Pages/Auth/Signup/SignupForm";
 import Login from "./components/Pages/Auth/Login/LoginForm";
 import EmailPendingPage from "./components/Pages/Auth/Email/EmailPendingPage";
 import EmailConfirmLink from "./components/Pages/Auth/Email/EmailConfirmLink";
+import ResetRequestPage from "./components/Pages/Auth/Reset_PassWord/ResetRequestPage";
+import ResetVerifyPage from "./components/Pages/Auth/Reset_PassWord/ResetVerifyPage";
+import ResetPasswordPage from "./components/Pages/Auth/Reset_PassWord/ResetPasswordPage";
 import Profile from "./components/Pages/Profile/ProfilePersonal/Profile";
 import Chat from "./components/Pages/Chat/Chat";
 import Match from "./components/Pages/Match/Match";
@@ -56,6 +59,9 @@ const App = () => {
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/email-confirm-link" element={<EmailConfirmLink />} />
+            <Route path="/reset-request" element={<ResetRequestPage />} />
+            <Route path="/reset-verify" element={<ResetVerifyPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/profile" element={<ProtectedRoute element={Profile} />} />
             <Route path="/chat" element={<ProtectedRoute element={Chat} />} />
             <Route path="/match" element={<ProtectedRoute element={Match} />} />

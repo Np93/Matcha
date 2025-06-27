@@ -13,22 +13,20 @@ import aiosmtplib
 
 from email.message import EmailMessage
 
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USERNAME = "matcha.ftt42@gmail.com"
+SMTP_SERVER = "smtp.gmail.com" settings.email_server
+SMTP_PORT = 587 email_port
+SMTP_USERNAME = "matcha.ftt42@gmail.com" settings.email
 SMTP_PASSWORD = settings.email_password_google
 
-# ici pas besoin de route
-async def send_verification_email(user_email: str, token: str):
-    confirm_url = f"https://localhost/email-confirm-link?token={token}"
-    html_content = build_verification_email_html(token)
-
+async def send_email(to: str, subject: str, text_content: str, html_content: str = None) -> bool:
     msg = EmailMessage()
     msg["From"] = SMTP_USERNAME
-    msg["To"] = user_email
-    msg["Subject"] = "Bienvenue sur Matcha – Confirme ton email"
-    msg.set_content("Bienvenue sur Matcha ! Clique ici pour confirmer ton email : " + confirm_url)
-    msg.add_alternative(html_content, subtype="html")
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.set_content(text_content)
+
+    if html_content:
+        msg.add_alternative(html_content, subtype="html")
 
     try:
         await aiosmtplib.send(
@@ -40,11 +38,34 @@ async def send_verification_email(user_email: str, token: str):
             use_tls=False,
             start_tls=True
         )
-        print(f"✅ Email envoyé à {user_email}")
+        print(f"✅ Email envoyé à {to}")
         return True
     except Exception as e:
-        print(f"❌ Erreur d'envoi : {e}")
+        print(f"❌ Erreur d'envoi à {to} : {e}")
         return False
+
+async def send_verification_email(user_email: str, token: str) -> bool:
+    confirm_url = f"https://localhost/email-confirm-link?token={token}"
+    html_content = build_verification_email_html(token)
+    text_content = f"Bienvenue sur Matcha ! Clique ici pour confirmer ton email : {confirm_url}"
+
+    return await send_email(
+        to=user_email,
+        subject="Bienvenue sur Matcha – Confirme ton email",
+        text_content=text_content,
+        html_content=html_content
+    )
+
+async def send_reset_email(email: str, code: str) -> bool:
+    text_content = f"Ton code de réinitialisation est : {code} (valable 10 min)"
+    html_content = build_reset_email_html(code)
+
+    return await send_email(
+        to=email,
+        subject="Réinitialisation de mot de passe – Matcha",
+        text_content=text_content,
+        html_content=html_content
+    )
 
 async def get_verification_token_info(token: str):
     query = text("SELECT user_id, expires_at FROM email_verification WHERE token = :token;")
@@ -96,6 +117,43 @@ async def save_email_verification_token(email: str, token: str):
 
     return expires_at  # Retourne la date d'expiration
 
+# Enregistre un nouveau code de reset
+async def save_reset_code(user_id: int, code: str, expires_at: datetime):
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            INSERT INTO password_reset (user_id, code, created_at, expires_at)
+            VALUES (:user_id, :code, NOW(), :expires_at)
+        """), {"user_id": user_id, "code": code, "expires_at": expires_at})
+
+# Supprime tous les anciens codes pour un utilisateur
+async def delete_reset_codes(user_id: int):
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            DELETE FROM password_reset WHERE user_id = :user_id
+        """), {"user_id": user_id})
+
+# Récupère le dernier code envoyé (pour anti-spam)
+async def get_last_reset_code_time(user_id: int):
+    async with engine.begin() as conn:
+        result = await conn.execute(text("""
+            SELECT created_at FROM password_reset
+            WHERE user_id = :user_id
+            ORDER BY created_at DESC LIMIT 1
+        """), {"user_id": user_id})
+        row = result.fetchone()
+    return row[0] if row else None
+
+# Vérifie si un code est encore valide
+async def verify_reset_code(user_id: int, code: str):
+    async with engine.begin() as conn:
+        result = await conn.execute(text("""
+            SELECT id FROM password_reset
+            WHERE user_id = :user_id AND code = :code AND expires_at > NOW()
+            ORDER BY created_at DESC LIMIT 1
+        """), {"user_id": user_id, "code": code})
+        row = result.fetchone()
+    return bool(row)
+
 def build_verification_email_html(token: str) -> str:
     confirm_url = f"https://localhost/email-confirm-link?token={token}"
     return f"""
@@ -138,6 +196,30 @@ def build_verification_email_html(token: str) -> str:
           <p style="text-align: center; font-size: 14px; color: #888;">
             À très vite sur Matcha ! 🍵<br />
             L’équipe Matcha – Ton cup de thé préféré.
+          </p>
+        </div>
+      </body>
+    </html>
+    """
+
+def build_reset_email_html(code: str) -> str:
+    return f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px;">
+        <div style="max-width: 600px; margin: auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); text-align: center;">
+          <h2 style="color: #e63946;">Réinitialisation de mot de passe</h2>
+          <p style="font-size: 16px; color: #333;">
+            Voici ton code de sécurité :
+          </p>
+          <div style="font-size: 32px; font-weight: bold; margin: 20px 0; background-color: #fce8e6; color: #e63946; padding: 10px 20px; border-radius: 8px; display: inline-block;">
+            {code}
+          </div>
+          <p style="color: #555; font-size: 14px;">
+            Ce code est valide pendant <strong>10 minutes</strong>.<br/>
+            Si tu n'as pas demandé de réinitialisation, ignore simplement cet email.
+          </p>
+          <p style="margin-top: 30px; font-size: 13px; color: #999;">
+            L’équipe Matcha ❤️
           </p>
         </div>
       </body>

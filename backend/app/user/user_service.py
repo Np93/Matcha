@@ -156,3 +156,18 @@ async def cleanup_unverified_accounts():
             DELETE FROM users
             WHERE email_verified = FALSE AND created_at < NOW() - INTERVAL '10 minutes'
         """))
+
+async def cleanup_expired_reset_codes():
+    query = text("DELETE FROM password_reset WHERE expires_at < NOW();")
+    async with engine.begin() as conn:
+        await conn.execute(query)
+
+async def update_user_password(user_id: int, password_hash: str):
+    query = text("UPDATE users SET password_hash = :password_hash WHERE id = :user_id;")
+    async with engine.begin() as conn:
+        await conn.execute(query, {"user_id": user_id, "password_hash": password_hash})
+
+async def delete_password_reset_entry(user_id: int):
+    query = text("DELETE FROM password_reset WHERE user_id = :user_id;")
+    async with engine.begin() as conn:
+        await conn.execute(query, {"user_id": user_id})

@@ -1,17 +1,17 @@
-from app.utils.jwt_handler import create_tokens
+from app.utils.jwt_handler import create_tokens, verify_user_from_token, create_email_verification_token
 from datetime import timedelta, datetime
 from fastapi.responses import RedirectResponse
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Request, Response
 from app.utils.validators import validate_email, validate_password
-from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username, get_user_by_id
+from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username, get_user_by_id, update_user_password, delete_password_reset_entry
 import logging
 import re
+import random
 from app.config import settings
 from app.tables.oauth import oauth
 from fastapi.responses import HTMLResponse
-from app.email.email_service import send_verification_email, save_email_verification_token, get_verification_token_info, mark_email_verified, delete_email_verification_entry
-from app.utils.jwt_handler import verify_user_from_token
+from app.email.email_service import send_verification_email, save_email_verification_token, get_verification_token_info, mark_email_verified, delete_email_verification_entry, send_reset_email, save_reset_code, delete_reset_codes, get_last_reset_code_time, verify_reset_code
 from app.user.oauth_service import is_oauth_account_linked, link_oauth_account, handle_google_picture_upload
 
 router = APIRouter()
@@ -122,9 +122,10 @@ async def signup(request: Request, response: Response):
     # Création des tokens
     access_token, refresh_token = create_tokens(user["id"])
 
-    expiration_time = await save_email_verification_token(email, access_token)
+    verification_token = create_email_verification_token(user["id"], email)
+    expiration_time = await save_email_verification_token(email, verification_token)
     print(f"✅ Token enregistré ! Expire à : {expiration_time}")
-    email_sent = await send_verification_email(email, access_token)
+    email_sent = await send_verification_email(email, verification_token)
     if not email_sent:
         return {"success": False, "detail": "Erreur lors de l'envoi de l'email de vérification."}
 
@@ -180,6 +181,84 @@ async def confirm_email(token: str):
 
     except Exception as e:
         return {"success": False, "detail": f" Erreur : {str(e)}"}
+
+
+@router.post("/request_reset")
+async def request_password_reset(request: Request):
+    body = await request.json()
+    email = body.get("email")
+
+    if not email or not validate_email(email):
+        return {"success": False, "detail": "Invalid email format"}
+
+    user = await get_user_by_email(email)
+    if not user:
+        return {"success": True, "detail": "Reset code sent to email."}
+
+    if not user["password_hash"]:
+        return {
+            "success": False,
+            "detail": "This account was created with Google. Please log in using Google."
+        }
+        # ou ca "detail": "Reset code sent to email."
+
+    last_created = await get_last_reset_code_time(user["id"])
+    if last_created and datetime.utcnow() - last_created < timedelta(seconds=60):
+        return {"success": False, "detail": "Please wait 1 minute before requesting a new code."}
+
+    await delete_reset_codes(user["id"])
+
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    await save_reset_code(user["id"], code, expires_at)
+
+    await send_reset_email(user["email"], code)
+    return {"success": True, "detail": "Reset code sent to email."}
+
+
+@router.post("/verify_reset_code")
+async def verify_code(request: Request):
+    body = await request.json()
+    email = body.get("email")
+    code = body.get("code")
+
+    user = await get_user_by_email(email)
+    if not user:
+        return {"success": False, "detail": "Invalid email or code"}
+    
+    if not code.isdigit():
+        return {"success": False, "detail": "Invalid code format"}
+
+    valid = await verify_reset_code(user["id"], code)
+    if not valid:
+        return {"success": False, "detail": "Invalid or expired code"}
+
+    return {"success": True}
+
+@router.post("/reset_password")
+async def reset_password(request: Request):
+    body = await request.json()
+    email = body.get("email")
+    code = body.get("code")
+    new_password = body.get("new_password")
+
+    if not validate_password(new_password):
+        return {"success": False, "detail": "Password does not meet security requirements"}
+
+    user = await get_user_by_email(email)
+    if not user:
+        return {"success": False, "detail": "Invalid request"}
+
+    valid = await verify_reset_code(user["id"], code)
+    if not valid:
+        return {"success": False, "detail": "Invalid or expired code"}
+
+    hashed = await hash_password(new_password)
+    await update_user_password(user["id"], hashed)
+    await delete_reset_codes(user["id"])
+
+    return {"success": True, "detail": "Password has been updated"}
+
 
 @router.get("/google/login")
 async def login_with_google(request: Request):

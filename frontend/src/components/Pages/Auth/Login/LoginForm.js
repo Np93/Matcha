@@ -161,6 +161,11 @@ const LoginForm = () => {
             Sign Up
           </button>
         </p>
+        <p className="text-center text-sm mt-3 text-gray-400">
+          <button className="hover:underline text-yellow-300" onClick={() => navigate("/reset-request")}>
+            Mot de passe oublié ?
+          </button>
+        </p>
         <div className="flex items-center my-6">
           <div className="flex-grow h-px bg-gray-600"></div>
           <span className="mx-4 text-gray-400 text-sm">or</span>
