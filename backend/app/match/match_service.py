@@ -2,6 +2,7 @@ from sqlalchemy.sql import text
 from datetime import datetime
 from app.utils.database import engine
 from app.profile.location_service import haversine
+import json
 
 async def check_same_like(liker_id: int, liked_id: int):
     """Vérifie si un like identique existe."""
@@ -156,11 +157,22 @@ def calculate_age(birthday):
     today = datetime.today()
     return today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
 
-def count_common_tags(user_tags, profile_tags):
-    """Compte le nombre de tags communs."""
-    user_set = set(tag.strip().lower() for tag in user_tags.split(",")) if user_tags else set()
-    profile_set = set(tag.strip().lower() for tag in profile_tags.split(",")) if profile_tags else set()
-    return len(user_set.intersection(profile_set))
+def count_common_tags(user_tags: str, profile_tags: str) -> int:
+    """Compte le nombre de tags communs entre deux chaînes JSON représentant des listes."""
+    try:
+        user_list = json.loads(user_tags) if user_tags else []
+    except json.JSONDecodeError:
+        user_list = []
+
+    try:
+        profile_list = json.loads(profile_tags) if profile_tags else []
+    except json.JSONDecodeError:
+        profile_list = []
+
+    user_set = set(tag.strip().lower() for tag in user_list)
+    profile_set = set(tag.strip().lower() for tag in profile_list)
+
+    return len(user_set & profile_set)
 
 async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, profiles, include_coords=False):
     """Ajoute distance, âge et nombre de tags communs à chaque profil."""
@@ -173,6 +185,8 @@ async def enrich_profiles(user_lat, user_lon, user_interests, liked_user_ids, pr
             )
 
         age = calculate_age(profile["birthday"]) if profile["birthday"] else None
+        print("user_interests:", user_interests, type(user_interests))
+        print("profile_interests:", profile["interests"], type(profile["interests"]))
         common_tags = count_common_tags(user_interests, profile["interests"])
         fame_rating = profile.get("fame_rating", 0)  # Si non défini, valeur par défaut 0
 

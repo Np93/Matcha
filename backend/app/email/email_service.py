@@ -13,9 +13,9 @@ import aiosmtplib
 
 from email.message import EmailMessage
 
-SMTP_SERVER = "smtp.gmail.com" settings.email_server
-SMTP_PORT = 587 email_port
-SMTP_USERNAME = "matcha.ftt42@gmail.com" settings.email
+SMTP_SERVER = settings.email_server
+SMTP_PORT = 587
+SMTP_USERNAME = settings.email
 SMTP_PASSWORD = settings.email_password_google
 
 async def send_email(to: str, subject: str, text_content: str, html_content: str = None) -> bool:
