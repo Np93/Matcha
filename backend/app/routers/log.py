@@ -49,7 +49,8 @@ async def get_status(request: Request):
     # Return user information with profile status
     return {
         "id": user["id"],
-        "has_profile": has_profile
+        "has_profile": has_profile,
+        "email_verified": user["email_verified"]
     }
 
 @router.post("/logout")

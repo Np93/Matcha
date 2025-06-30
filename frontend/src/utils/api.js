@@ -22,6 +22,7 @@ export const apiCall = async (url, method, body) => {
 
     return response.data;
   } catch (error) {
+    // console.error(error)
     // Cas où ce n’est pas un succès contrôlé mais une vraie erreur réseau
     showErrorToast(error);
     throw new Error(error.response?.data?.detail|| "API call failed");

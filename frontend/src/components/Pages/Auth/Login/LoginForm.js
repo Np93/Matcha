@@ -19,7 +19,7 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateUsername(username)) {
-      alert("Invalid username. Only letters, numbers, _, ., and - are allowed.");
+      showErrorToast("Invalid username. Only letters, numbers, _, ., and - are allowed.");
       return;
     }
     try {
@@ -33,11 +33,14 @@ const LoginForm = () => {
       const userStatus = await apiCall("/log/status", "GET");
       
       // Update auth context with response and profile status
-      updateAuthContext({...response, has_profile: userStatus.has_profile});
+      // console.log(userStatus)
+      updateAuthContext({...response, has_profile: userStatus.has_profile, email_verified: userStatus.email_verified});
       
       // Redirect to the appropriate page based on profile status
       if (userStatus.has_profile) {
         navigate("/profile");
+      } else if(!userStatus.email_verified) {
+        navigate("/email-pending")
       } else {
         navigate("/complete-profile");
       }
@@ -71,7 +74,7 @@ const LoginForm = () => {
           const userStatus = await apiCall("/log/status", "GET");
           
           // Update auth context with response and profile status
-          updateAuthContext({...response, has_profile: userStatus.has_profile});
+          updateAuthContext({...response, has_profile: userStatus.has_profile, email_verified: userStatus.email_verified});
           
           // Redirect to the appropriate page based on profile status
           if (userStatus.has_profile) {
@@ -156,6 +159,11 @@ const LoginForm = () => {
             onClick={() => navigate("/signup")}
           >
             Sign Up
+          </button>
+        </p>
+        <p className="text-center text-sm mt-3 text-gray-400">
+          <button className="hover:underline text-yellow-300" onClick={() => navigate("/reset-request")}>
+            Mot de passe oublié ?
           </button>
         </p>
         <div className="flex items-center my-6">

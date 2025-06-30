@@ -258,11 +258,11 @@ const Navbar = () => {
                       Location Settings
                     </Link>
                   </li>
-                  <li className="border-b border-gray-500 border-opacity-30">
+                  {/* <li className="border-b border-gray-500 border-opacity-30">
                     <Link to="/settings/account" className="block px-4 py-2 text-gray-200 hover:bg-gray-800 hover:text-white">
                       Account Settings
                     </Link>
-                  </li>
+                  </li> */}
                   <li>
                     <button
                       onClick={handleLogout}

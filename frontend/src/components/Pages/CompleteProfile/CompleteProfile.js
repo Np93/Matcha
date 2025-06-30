@@ -70,7 +70,7 @@ const CompleteProfile = () => {
       });
 
       // Update auth context to indicate the profile is now complete
-      updateAuthContext({ id: response.id, has_profile: true });
+      updateAuthContext({ id: response.id, has_profile: true, email_verified: true });
       
       showErrorToast("Profile completed successfully!");
       navigate("/profile"); // Redirige vers la page profil

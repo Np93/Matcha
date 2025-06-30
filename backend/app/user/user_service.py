@@ -12,11 +12,11 @@ async def verify_password(password: str, hashed_password: str) -> bool:
     """Vérifie si un mot de passe correspond au haché."""
     return checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-async def add_user(email: str, username: str, first_name: str, last_name: str, password_hash: str):
+async def add_user(email: str, username: str, first_name: str, last_name: str, password_hash: str, email_verified: bool):
     """Ajoute un utilisateur dans la base de données en SQL."""
     query = text("""
-    INSERT INTO users (email, username, first_name, last_name, password_hash, created_at, status, laste_connexion)
-    VALUES (:email, :username, :first_name, :last_name, :password_hash, :created_at, :status, :laste_connexion);
+    INSERT INTO users (email, username, first_name, last_name, password_hash, created_at, status, laste_connexion, email_verified)
+    VALUES (:email, :username, :first_name, :last_name, :password_hash, :created_at, :status, :laste_connexion, :email_verified);
     """)
     
     async with engine.begin() as conn:
@@ -28,7 +28,8 @@ async def add_user(email: str, username: str, first_name: str, last_name: str, p
             "password_hash": password_hash,
             "created_at": datetime.utcnow(),
             "status": True,
-            "laste_connexion": datetime.utcnow()
+            "laste_connexion": datetime.utcnow(),
+            "email_verified": email_verified
         })
 
 async def get_user_by_email(email: str):
@@ -79,10 +80,7 @@ async def authenticate_user_by_username(username: str, password: str) -> bool:
     if not user:
         return False
     if not user.get("password_hash"):
-        raise HTTPException(
-            status_code=403,
-            detail="This account was created with Google. Please log in using Google."
-        )
+        return None
     return checkpw(password.encode('utf-8'), user["password_hash"].encode('utf-8'))
 
 async def save_profile_picture(user_id: int, image_bytes: bytes):
@@ -151,3 +149,25 @@ async def mark_users_offline_if_needed():
     """)
     async with engine.begin() as conn:
         await conn.execute(query)
+
+async def cleanup_unverified_accounts():
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+            DELETE FROM users
+            WHERE email_verified = FALSE AND created_at < NOW() - INTERVAL '10 minutes'
+        """))
+
+async def cleanup_expired_reset_codes():
+    query = text("DELETE FROM password_reset WHERE expires_at < NOW();")
+    async with engine.begin() as conn:
+        await conn.execute(query)
+
+async def update_user_password(user_id: int, password_hash: str):
+    query = text("UPDATE users SET password_hash = :password_hash WHERE id = :user_id;")
+    async with engine.begin() as conn:
+        await conn.execute(query, {"user_id": user_id, "password_hash": password_hash})
+
+async def delete_password_reset_entry(user_id: int):
+    query = text("DELETE FROM password_reset WHERE user_id = :user_id;")
+    async with engine.begin() as conn:
+        await conn.execute(query, {"user_id": user_id})

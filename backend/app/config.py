@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     google_api_base: str
     google_scope: str
 
+    email_password_google: str
+    email_server: str
+    email: str
+
     # frontend_url: str
     frontend_origin: str
 

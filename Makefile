@@ -47,6 +47,17 @@ fclean: ## Supprimer les conteneurs, les volumes et les images Docker
 ps: ## Afficher les conteneurs en cours d'exécution
 	docker ps
 
+insert_all: ## insert de faux profiles
+	docker build -f scripts/Dockerfile.insert -t insert-fake-profiles .
+	docker run --rm \
+		--env POSTGRES_DB=matcha \
+		--env POSTGRES_USER=postgres \
+		--env POSTGRES_PASSWORD=your_password \
+		--env POSTGRES_HOST=postgres_db \
+		--env POSTGRES_PORT=5432 \
+		--network matcha_default \
+		insert-fake-profiles
+
 # Rebuild and restart
 re: clean all ## Nettoyer puis reconstruire et redémarrer les conteneurs
 	@echo "Rebuilt and restarted containers."

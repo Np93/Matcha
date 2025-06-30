@@ -1,15 +1,17 @@
-from app.utils.jwt_handler import create_tokens
-from datetime import timedelta
+from app.utils.jwt_handler import create_tokens, verify_user_from_token, create_email_verification_token
+from datetime import timedelta, datetime
+from fastapi.responses import RedirectResponse
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter, Request, Response
 from app.utils.validators import validate_email, validate_password
-from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username
+from app.user.user_service import add_user, hash_password, authenticate_user, get_user_by_email, update_user_status, get_user_by_username, authenticate_user_by_username, get_user_by_id, update_user_password, delete_password_reset_entry
 import logging
 import re
+import random
 from app.config import settings
 from app.tables.oauth import oauth
 from fastapi.responses import HTMLResponse
-from app.utils.jwt_handler import verify_user_from_token
+from app.email.email_service import send_verification_email, save_email_verification_token, get_verification_token_info, mark_email_verified, delete_email_verification_entry, send_reset_email, save_reset_code, delete_reset_codes, get_last_reset_code_time, verify_reset_code
 from app.user.oauth_service import is_oauth_account_linked, link_oauth_account, handle_google_picture_upload
 
 router = APIRouter()
@@ -40,15 +42,17 @@ async def login(request: Request, response: Response):
     # Authentifier l'utilisateur via la base de données
     auth_user = await authenticate_user_by_username(username, password)
     if not auth_user:
-        # print("ERROR: Invalid credentials")  # Erreur d'authentification
-        return {"success": False, "detail": "Invalid credentials"}
+        if auth_user is None:
+            return { "success": False, "detail": "This account was created with Google. Please log in using Google." }
+        elif auth_user is False:
+            return { "success": False, "detail": "Invalid credentials." }
 
     # # print(f"DEBUG: User {email} authenticated successfully. Generating JWT token...")  # Authentification réussie
     user = await get_user_by_username(username)
     # print(user)
     # Vérifier si l'utilisateur est déjà connecté
-    if user["status"]:  # Vérifie si le statut est déjà `True`
-        return {"success": False, "detail": "User is already logged in"}
+    # if user["status"]:  # Vérifie si le statut est déjà `True`
+    #     return {"success": False, "detail": "User is already logged in"}
 
     await update_user_status(user["id"], True)
     # user = await get_user_by_email(email)
@@ -111,12 +115,19 @@ async def signup(request: Request, response: Response):
     password_hash = await hash_password(password)
 
     # Ajouter l'utilisateur à la base de données
-    await add_user(email, username, first_name, last_name, password_hash)
+    await add_user(email, username, first_name, last_name, password_hash, email_verified=False)
 
     user = await get_user_by_email(email)
 
     # Création des tokens
     access_token, refresh_token = create_tokens(user["id"])
+
+    verification_token = create_email_verification_token(user["id"], email)
+    expiration_time = await save_email_verification_token(email, verification_token)
+    print(f"✅ Token enregistré ! Expire à : {expiration_time}")
+    email_sent = await send_verification_email(email, verification_token)
+    if not email_sent:
+        return {"success": False, "detail": "Erreur lors de l'envoi de l'email de vérification."}
 
     # Définir un cookie sécurisé contenant le JWT
     response.set_cookie(
@@ -137,7 +148,117 @@ async def signup(request: Request, response: Response):
     return {
         "success": True,
         "id": user["id"],
+        "email_verified": False,
     }
+
+@router.get("/email_status")
+async def check_email_verification(request: Request):
+    user = await verify_user_from_token(request)
+    print(user)
+    if isinstance(user, JSONResponse):
+        return user
+
+    user_data = await get_user_by_id(user["id"])
+    return {
+        "success": True,
+        "id": user_data["id"],
+        "email_verified": user_data["email_verified"]
+    }
+
+@router.get("/confirm_email/{token}")
+async def confirm_email(token: str):
+    """Confirme l'email (appel AJAX)"""
+    try:
+        user_id, expires_at = await get_verification_token_info(token)
+
+        if datetime.utcnow() > expires_at:
+            return {"success": False, "detail": "Token expiré."}
+
+        await mark_email_verified(user_id)
+        await delete_email_verification_entry(user_id)
+
+        return {"success": True, "detail": "Email confirmé."}
+
+    except Exception as e:
+        return {"success": False, "detail": f" Erreur : {str(e)}"}
+
+
+@router.post("/request_reset")
+async def request_password_reset(request: Request):
+    body = await request.json()
+    email = body.get("email")
+
+    if not email or not validate_email(email):
+        return {"success": False, "detail": "Invalid email format"}
+
+    user = await get_user_by_email(email)
+    if not user:
+        return {"success": True, "detail": "Reset code sent to email."}
+
+    if not user["password_hash"]:
+        return {
+            "success": False,
+            "detail": "This account was created with Google. Please log in using Google."
+        }
+        # ou ca "detail": "Reset code sent to email."
+
+    last_created = await get_last_reset_code_time(user["id"])
+    if last_created and datetime.utcnow() - last_created < timedelta(seconds=60):
+        return {"success": False, "detail": "Please wait 1 minute before requesting a new code."}
+
+    await delete_reset_codes(user["id"])
+
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    await save_reset_code(user["id"], code, expires_at)
+
+    await send_reset_email(user["email"], code)
+    return {"success": True, "detail": "Reset code sent to email."}
+
+
+@router.post("/verify_reset_code")
+async def verify_code(request: Request):
+    body = await request.json()
+    email = body.get("email")
+    code = body.get("code")
+
+    user = await get_user_by_email(email)
+    if not user:
+        return {"success": False, "detail": "Invalid email or code"}
+    
+    if not code.isdigit():
+        return {"success": False, "detail": "Invalid code format"}
+
+    valid = await verify_reset_code(user["id"], code)
+    if not valid:
+        return {"success": False, "detail": "Invalid or expired code"}
+
+    return {"success": True}
+
+@router.post("/reset_password")
+async def reset_password(request: Request):
+    body = await request.json()
+    email = body.get("email")
+    code = body.get("code")
+    new_password = body.get("new_password")
+
+    if not validate_password(new_password):
+        return {"success": False, "detail": "Password does not meet security requirements"}
+
+    user = await get_user_by_email(email)
+    if not user:
+        return {"success": False, "detail": "Invalid request"}
+
+    valid = await verify_reset_code(user["id"], code)
+    if not valid:
+        return {"success": False, "detail": "Invalid or expired code"}
+
+    hashed = await hash_password(new_password)
+    await update_user_password(user["id"], hashed)
+    await delete_reset_codes(user["id"])
+
+    return {"success": True, "detail": "Password has been updated"}
+
 
 @router.get("/google/login")
 async def login_with_google(request: Request):
@@ -253,7 +374,8 @@ async def handle_google_signup(email: str, first_name: str, last_name: str, user
         username=unique_username,
         first_name=first_name,
         last_name=last_name,
-        password_hash=None
+        password_hash=None,
+        email_verified=True
     )
 
     user = await get_user_by_email(email)

@@ -104,7 +104,6 @@ Thumbs.db
 /.pytest_cache/
 /models/
 /outputs/
-data/
 .ipynb_checkpoints/
 
 coverage.xml

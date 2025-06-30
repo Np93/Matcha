@@ -20,6 +20,18 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     encoded_jwt = jwt.encode(to_encode, settings.api_secret, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
+def create_email_verification_token(user_id: int, email: str, expires_delta: timedelta = timedelta(minutes=10)) -> str:
+    now = datetime.utcnow()
+    expire = now + expires_delta
+    payload = {
+        "sub": "email_verification",
+        "user_id": user_id,
+        "email": email,
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp())
+    }
+    return jwt.encode(payload, settings.api_secret, algorithm=settings.jwt_algorithm)
+
 # Génère un access token (JWT court) et un refresh token (JWT long)
 def create_tokens(user_id: int):
     access_token_expires = timedelta(minutes=15)  # Access token expire après 15 minutes

@@ -1,0 +1,18 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y postgresql-client
+
+# Install requirements
+COPY scripts/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy scripts and data
+COPY scripts/insert.sh ./insert.sh
+COPY scripts/insert_images.py ./scripts/insert_images.py
+COPY data /app/data
+
+RUN chmod +x ./insert.sh
+
+CMD ["./insert.sh"]
