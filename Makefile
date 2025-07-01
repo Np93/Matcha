@@ -47,7 +47,7 @@ fclean: ## Supprimer les conteneurs, les volumes et les images Docker
 ps: ## Afficher les conteneurs en cours d'exécution
 	docker ps
 
-insert_all: ## insert de faux profiles
+insert_all: ## insert de faux profiles  attention ne pas avoir cree de user
 	docker build -f scripts/Dockerfile.insert -t insert-fake-profiles .
 	docker run --rm \
 		--env POSTGRES_DB=matcha \
