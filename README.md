@@ -60,6 +60,9 @@ Figure 3: Search page view on desktop.
 Figure 4: Chat Interface view on desktop.
 ![Chat Interface](assets/chat.png)
 
+Figure 4: Email received.
+![Email received](assets/email.png)
+
 ## Tech Stack
 - Frontend: React + Tailwind CSS
 - Backend: FastAPI (async) + WebSockets
