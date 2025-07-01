@@ -48,12 +48,10 @@ Once launched:
 
 You can insert images to illustrate features:
 
-```md
 ![Home Page](assets/home.png)
 ![Profile Page](assets/profile.png)
 ![search Page](assets/search.png)
 ![Chat Interface](assets/chat.png)
-```
 
 ## Tech Stack
 - Frontend: React + Tailwind CSS
@@ -79,28 +77,8 @@ You can insert images to illustrate features:
 - ✅ Date planning system (experimental)
 - ✅ typing in chat
 
-## Project Structure
-
-matcha
- ┣ 🐳 docker-compose.yml
- ┣ 📁 backend
- ┃ ┣ 📁 app
- ┃ ┃ ┣ 📁 api
- ┃ ┃ ┣ 📁 services
- ┃ ┃ ┣ 📁 models
- ┃ ┃ ┣ 📁 utils
- ┃ ┣ main.py
- ┣ 📁 frontend
- ┃ ┣ 📁 src
- ┃ ┣ App.jsx
- ┣ 📁 nginx
- ┃ ┣ nginx.conf
- ┣ 📁 scripts
- ┃ ┣ insert_all.py
- ┣ Makefile
-
 ## Author
-Project developed by Nicolas Hirzel and Jérémy Olivier
-GitHub: [@Np93](https://github.com/Np93)
-GitHub: [@jreivilo](https://github.com/jreivilo)
-School: 42 Lausanne
+- Project developed by Nicolas Hirzel and Jérémy Olivier
+- GitHub: [@Np93](https://github.com/Np93)
+- GitHub: [@jreivilo](https://github.com/jreivilo)
+- sSchool: 42 Lausanne
