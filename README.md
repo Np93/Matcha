@@ -43,6 +43,8 @@ Once launched:
 - Visit [`https://127.0.0.1`](https://127.0.0.1)
 - Email-based login works correctly
 - Google OAuth2 login is **implemented** but in **development mode**, meaning it only works with pre-authorized Google accounts
+doc:
+- http://127.0.0.1:8000/docs#/
 
 ## Screenshots (to be added)
 
