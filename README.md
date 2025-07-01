@@ -48,9 +48,16 @@ Once launched:
 
 You can insert images to illustrate features:
 
+*Figure 1: Homepage view on desktop.*
 ![Home Page](assets/home.png)
+
+*Figure 2: Profile page view on desktop.*
 ![Profile Page](assets/profile.png)
-![search Page](assets/search.png)
+
+*Figure 3: Search page view on desktop.*
+![Search Page](assets/search.png)
+
+*Figure 4: Chat Interface view on desktop.*
 ![Chat Interface](assets/chat.png)
 
 ## Tech Stack
