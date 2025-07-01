@@ -28,6 +28,47 @@ This project was entirely developed by me and jreivilo as part of the 42 curricu
 
 ## Getting Started
 
+## Environment Variables
+
+All environment-specific configurations are defined in a `.env` file, which must be placed at the root of the project. A sample file is provided below:
+
+### Example: `.env.example`
+
+```env
+# Backend settings
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+API_SECRET=your_super_secret_key
+JWT_ALGORITHM=HS256 # it's an example
+
+# PostgreSQL
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=matcha
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql+asyncpg://postgres:your_password@db:5432/matcha
+
+# OAuth GOOGLE
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_AUTH_URL=https://accounts.google.com/o/oauth2/auth
+GOOGLE_TOKEN_URL=https://oauth2.googleapis.com/token
+GOOGLE_API_BASE=https://www.googleapis.com/oauth2/v2/
+GOOGLE_SCOPE=openid email profile
+
+# Email
+EMAIL_SERVER=smtp.yourprovider.com
+EMAIL_PASSWORD_GOOGLE=your_email_password
+EMAIL=noreply@yourdomain.com
+
+# Frontend
+LOCAL_IP=127.0.0.1 # for local
+FRONTEND_ORIGIN=https://${LOCAL_IP}
+FRONTEND_URL=https://${LOCAL_IP}
+REACT_APP_API_URL=https://${LOCAL_IP}/api
+```
+
 ### Docker + Makefile
 
 This project runs fully in Docker. Three main commands are available via the `Makefile`:
@@ -46,7 +87,7 @@ Once launched:
 doc:
 - http://127.0.0.1:8000/docs#/
 
-## Screenshots (to be added)
+## Screenshots
 
 You can insert images to illustrate features:
 
@@ -88,6 +129,15 @@ Figure 4: Email received.
 - ✅ Google OAuth2 login (fully implemented, Google-side still in dev mode)
 - ✅ Date planning system (experimental)
 - ✅ typing in chat
+
+## Areas for Improvement
+
+Several enhancements have been identified to optimize the user experience and application performance:
+
+- **Unify WebSocket connections**: centralize WebSocket channels (chat, notifications, calls...) to reduce the number of open connections and simplify frontend handling.
+- **Add pagination** when searching profiles to reduce initial loading time and improve responsiveness.
+- **Message read indicators**: display whether a message has been read in the chat interface for better conversation clarity.
+- **Redesign the profile page** for a more polished look and improved layout of user information.
 
 ## Author
 - Project developed by Nicolas Hirzel and Jérémy Olivier
