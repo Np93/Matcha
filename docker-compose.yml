@@ -7,8 +7,6 @@ services:
       dockerfile: docker/back/Dockerfile
     container_name: backend
     command: /wait-for-it.sh uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8000:8000"
     volumes:
       - ./backend:/app
     env_file:
@@ -16,59 +14,23 @@ services:
     restart: always
     depends_on:
       - db
+    networks:
+      - internal
 
-  frontend:
+  nginx:
     build:
       context: .
       dockerfile: docker/front/Dockerfile
-      target: dev
-    container_name: frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "3000:3000"
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
-    restart: always
-    depends_on:
-      - backend
-    profiles:
-      - dev
-
-  frontend_prod:
-    build:
-      context: .
-      dockerfile: docker/front/Dockerfile
-      target: prod
-    container_name: frontend
-    volumes:
-      - ./docker/ssl:/etc/nginx/ssl
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL}
+    container_name: nginx
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
     depends_on:
       - backend
-    profiles:
-      - prod
-
-  nginx_dev:
-    image: nginx:stable-alpine
-    container_name: nginx_dev
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./docker/front/nginx.dev.conf:/etc/nginx/nginx.conf:ro
-      - ./docker/ssl:/etc/nginx/ssl
-    depends_on:
-      - frontend
-      - backend
-    profiles:
-      - dev
+    networks:
+      - internal
 
   certgen:
     image: alpine:latest
@@ -77,8 +39,6 @@ services:
       - ./docker/ssl:/certs
       - ./docker/certgen/entrypoint.sh:/entrypoint.sh
     entrypoint: /entrypoint.sh
-    profiles:
-      - dev
 
   db:
     image: postgres:14
@@ -88,10 +48,14 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
 
 volumes:
   db_data:

@@ -8,7 +8,7 @@ DC = docker-compose
 # all: ## Construire et démarrer les conteneurs avec sudo
 # 	$(DC) up --build
 # 	@echo "Containers started with sudo."
-all: dev ## Par défaut, lancer le projet en mode développement
+all: prod ## Par défaut, lancer le projet en mode développement
 
 # Construire les services Docker
 build: ## Construire les images Docker pour tous les services
@@ -20,16 +20,12 @@ up: ## Démarrer tous les services en arrière-plan
 	$(DC) up
 	@echo "Containers are up."
 
-dev: certs ## Lancer tous les services avec React en mode dev (npm start)
-	$(DC) -f docker-compose.yml --profile dev up --build
-	@echo "Dev environment started on port 443."
-
 prod: certs ## Lancer tous les services avec React buildé + Nginx
-	$(DC) -f docker-compose.yml --profile prod up --build
+	$(DC) -f docker-compose.yml up --build
 	@echo "Production environment started on port 443."
 
 certs: ## Générer les certificats SSL si nécessaire
-	$(DC) -f docker-compose.yml --profile dev run --rm certgen
+	$(DC) -f docker-compose.yml run --rm certgen
 	@echo "Certificats générés dans ./docker/ssl"
 
 # Supprimer les conteneurs mais conserver les volumes
@@ -39,7 +35,7 @@ clean: ## Arrêter et supprimer les conteneurs, tout en conservant les volumes
 
 # Supprimer les conteneurs, les volumes et les images associées
 fclean: ## Supprimer les conteneurs, les volumes et les images Docker
-	$(DC) --profile dev --profile prod down --rmi all --volumes --remove-orphans
+	$(DC) down --rmi all --volumes --remove-orphans
 	docker system prune -f
 	@echo "Cleaned all containers, volumes, and images."
 
@@ -55,7 +51,7 @@ insert_all: ## insert de faux profiles  attention ne pas avoir cree de user
 		--env POSTGRES_PASSWORD=your_password \
 		--env POSTGRES_HOST=postgres_db \
 		--env POSTGRES_PORT=5432 \
-		--network matcha_default \
+		--network matcha_internal \
 		insert-fake-profiles
 
 # Rebuild and restart
